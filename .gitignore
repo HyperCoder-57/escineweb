@@ -1,0 +1,13 @@
+# Node modules
+node_modules/
+
+# Environment variables
+.env
+
+# Build artifacts
+frontend/build/
+
+# Editor files
+.vscode/
+.idea/
+*.log
