@@ -1,6 +1,5 @@
 
-# 🎬 EsCine - Plataforma de Cine Mágica
-
+# 🎬 EsCine
 
 Este proyecto es una aplicación web desarrollada con **React** que te permite explorar películas y reservar boletos. Está inspirada en estrategias de marketing de plataformas como Facebook/Meta para maximizar la conversión.
 
