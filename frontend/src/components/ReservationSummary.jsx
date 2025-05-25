@@ -2,12 +2,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.png';
 
 function ReservationSummary() {
-  // Usar useNavigate para la navegación (React Router v6)
   const navigate = useNavigate();
 
   // Datos dummy
   const movie = {
-    id: 8, // Coincide con los datos de Home.jsx
+    id: 8,
     title: "Sin Límites",
     poster: "https://www18.pelisplushd.to/poster/sin-limites-thumb.jpg",
     classification: "R",
@@ -55,7 +54,13 @@ function ReservationSummary() {
             </Link>
           </div>
 
-          <nav className="hidden md:block"></nav>
+          {/* Banner de urgencia y prueba social */}
+          <div className="bg-gradient-to-r from-yellow-400 to-red-500 text-white p-2 md:p-3 rounded-lg text-center shadow-lg animate-pulse w-full md:w-auto mx-auto md:mx-0">
+            <p className="text-sm md:text-base font-bold">
+              ¡Solo quedan pocos asientos para "Sin Límites" hoy, 24 de mayo de 2025! 
+              <span className="block md:inline">Más de 500 fans ya reservaron. ¡Sé el próximo!</span>
+            </p>
+          </div>
 
           {/* Avatar */}
           <div className="flex flex-col items-center">
@@ -71,19 +76,23 @@ function ReservationSummary() {
       <main className="container mx-auto p-4 flex-grow">
         <div className="max-w-5xl mx-auto">
           {/* Título de la película */}
-          <h1 className="text-3xl font-bold mb-6">{movie.title}</h1>
+          <h1 className="text-4xl md:text-5xl font-extrabold mb-6 text-gray-800 animate-fade-in">
+            {movie.title} - ¡Tu épica aventura te espera!
+          </h1>
 
           <div className="flex flex-col md:flex-row gap-6">
             {/* Horarios de proyección (izquierda) */}
-            <div className="w-full md:w-1/3 bg-white p-4 rounded-lg shadow-md">
-              <h2 className="text-2xl font-semibold mb-4">Horarios de Proyección</h2>
+            <div className="w-full md:w-1/3 bg-white p-6 rounded-lg shadow-xl border-l-4 border-blue-500 hover:shadow-2xl transition">
+              <h2 className="text-2xl font-semibold mb-4 text-blue-700">Horarios Disponibles</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {Object.entries(schedules).map(([day, times]) => (
                   <div key={day} className="min-w-[120px] mb-2">
-                    <h3 className="font-medium">{day}</h3>
-                    <ul className="list-disc list-inside text-sm">
+                    <h3 className="font-medium text-gray-700">{day}</h3>
+                    <ul className="list-disc list-inside text-sm text-gray-600">
                       {times.map((time, index) => (
-                        <li key={index} className="whitespace-nowrap">{time}</li>
+                        <li key={index} className="hover:text-blue-500 cursor-pointer transition">
+                          {time}
+                        </li>
                       ))}
                     </ul>
                   </div>
@@ -98,29 +107,36 @@ function ReservationSummary() {
                 <img
                   src={movie.poster}
                   alt={movie.title}
-                  className="w-full h-auto object-cover rounded-lg shadow-md"
+                  className="w-full h-auto object-cover rounded-lg shadow-md hover:scale-105 transition-transform duration-300"
                 />
               </div>
 
               {/* Información de la película (derecha) */}
-              <div className="w-full md:w-1/2 bg-white p-4 rounded-lg shadow-md">
-                <p className="mb-2"><strong>Clasificación:</strong> {movie.classification}</p>
-                <p className="mb-2">
+              <div className="w-full md:w-1/2 bg-white p-6 rounded-lg shadow-xl border-r-4 border-red-500 hover:shadow-2xl transition">
+                <p className="mb-2 text-lg"><strong>Clasificación:</strong> <span className="text-red-600">{movie.classification}</span></p>
+                <p className="mb-2 text-lg">
                   <strong>Valoración:</strong> {renderStars(movie.rating)}
                 </p>
-                <p className="mb-2"><strong>Director:</strong> {movie.director}</p>
-                <p className="mb-2"><strong>Sinopsis:</strong> {movie.synopsis}</p>
+                <p className="mb-2 text-lg"><strong>Director:</strong> <span className="text-gray-700">{movie.director}</span></p>
+                <p className="mb-4 text-lg"><strong>Sinopsis:</strong> <span className="text-gray-600">{movie.synopsis}</span></p>
+                <div className="flex items-center justify-between text-sm text-gray-500">
+                  <span>Seguro y fácil</span>
+                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full">Certificado</span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Botón Reservar */}
-          <div className="mt-6 text-center">
+          {/* Sección de conversión con CTA */}
+          <div className="mt-8 text-center bg-gradient-to-r from-blue-500 to-purple-600 p-6 rounded-lg shadow-2xl animate-bounce-slow">
+            <p className="text-white text-xl mb-4">
+              ¡Reserva ahora y obtén un 10% de descuento en tu próxima compra!
+            </p>
             <button
-              className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition"
+              className="bg-yellow-400 text-black px-8 py-4 rounded-full font-bold text-xl hover:bg-yellow-500 transition-transform hover:scale-105 shadow-lg"
               onClick={() => navigate(`/seat/${movie.id}`)}
             >
-              Reservar
+              ¡Reserva tu aventura ahora!
             </button>
           </div>
         </div>

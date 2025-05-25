@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
 import logo from '../assets/logo.png';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 function SeatSelector() {
   const { id } = useParams();
@@ -11,6 +11,9 @@ function SeatSelector() {
   const [timeLeft, setTimeLeft] = useState(300);
   const [notification, setNotification] = useState('');
   const [seats, setSeats] = useState([]);
+  const [lastSeatChange, setLastSeatChange] = useState(null);
+  const [highlightConfirmButton, setHighlightConfirmButton] = useState(false);
+  const confirmButtonRef = useRef(null);
 
   const movie = { title: "The Passion", id: parseInt(id) || 1 };
 
@@ -62,7 +65,6 @@ function SeatSelector() {
   const currentDateData = availableDates.find((d) => d.date === selectedDate) || (availableDates[0] || {});
   const availableTimes = currentDateData.times || [];
 
-  // Corrige el error: no regenerar los asientos dinámicamente en cada render
   useEffect(() => {
     if (!selectedBranch || !selectedDate || !selectedTime) {
       setSeats([]);
@@ -93,6 +95,7 @@ function SeatSelector() {
           ? prev.filter((id) => id !== seatId)
           : [...prev, seatId]
       );
+      setLastSeatChange(Date.now());
     }
   };
 
@@ -115,6 +118,18 @@ function SeatSelector() {
 
   const isButtonDisabled = !selectedBranch || !selectedDate || !selectedTime || selectedSeats.length === 0 || timeLeft <= 0;
 
+  useEffect(() => {
+    if (selectedSeats.length > 0 && lastSeatChange) {
+      const timeout = setTimeout(() => {
+        if (confirmButtonRef.current && Date.now() - lastSeatChange >= 2000) {
+          confirmButtonRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          setHighlightConfirmButton(true);
+        }
+      }, 2000);
+      return () => clearTimeout(timeout);
+    }
+  }, [selectedSeats, lastSeatChange]);
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
       <header className="bg-blue-600 text-white p-4 shadow-md">
@@ -122,7 +137,14 @@ function SeatSelector() {
           <Link to="/">
             <img src={logo} alt="Cinema Logo" className="max-h-16 w-auto object-contain" />
           </Link>
-          <h1 className="text-xl md:text-2xl font-bold text-center flex-1">{movie.title}</h1>
+          <div className="flex-1 text-center">
+            <h1 className="text-xl md:text-2xl font-bold mb-2">{movie.title} - ¡Vive la magia del cine!</h1>
+            <div className="bg-gradient-to-r from-yellow-400 to-red-500 text-white p-2 md:p-3 rounded-lg shadow-lg animate-pulse">
+              <p className="text-sm md:text-base font-bold">
+                ¡Últimos asientos disponibles para esta función! Más de 300 fans ya reservaron.
+              </p>
+            </div>
+          </div>
           <div className="flex flex-col items-center">
             <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
               <span className="text-xl text-black">👤</span>
@@ -134,39 +156,42 @@ function SeatSelector() {
 
       <main className="container mx-auto p-4 flex-grow">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-6">
-          {/* Panel de selección */}
-          <div className="w-full md:w-1/4 bg-white p-4 rounded-lg shadow-md">
+          {/* Panel de selección con halo */}
+          <div className="w-full md:w-1/4 bg-white p-6 rounded-lg shadow-xl border-l-4 border-blue-500 hover:shadow-2xl transition">
+            <h2 className="text-xl font-bold mb-4 text-blue-700">Selecciona tu función</h2>
             <div className="mb-4">
-              <label className="block mb-2 font-medium">Sucursal:</label>
+              <label className="block mb-2 font-medium text-gray-700">Sucursal <span className="text-red-500">*</span></label>
               <select
-                className="w-full p-2 border rounded"
+                className={`w-full p-2 border rounded text-gray-800 focus:ring-2 focus:ring-blue-500 ${!selectedBranch ? 'shadow-[0_0_10px_rgba(239,68,68,0.7)] animate-halo-pulse' : 'shadow-[0_0_10px_rgba(16,185,129,0.7)] animate-halo-glow'}`}
                 value={selectedBranch}
                 onChange={(e) => {
                   setSelectedBranch(e.target.value);
                   setSelectedDate('');
                   setSelectedTime('');
                   setSelectedSeats([]);
+                  setNotification('¡Buen comienzo! Ahora elige una fecha.');
                 }}
               >
-                <option value="">Selecciona una sucursal</option>
+                <option value="">Elige tu sucursal primero</option>
                 {branchesData.map((branch) => (
                   <option key={branch.name} value={branch.name}>{branch.name}</option>
                 ))}
               </select>
             </div>
             <div className="mb-4">
-              <label className="block mb-2 font-medium">Fecha:</label>
+              <label className="block mb-2 font-medium text-gray-700">Fecha <span className="text-red-500">*</span></label>
               <select
-                className="w-full p-2 border rounded"
+                className={`w-full p-2 border rounded text-gray-800 focus:ring-2 focus:ring-blue-500 ${selectedBranch && !selectedDate ? 'shadow-[0_0_10px_rgba(239,68,68,0.7)] animate-halo-pulse' : selectedDate ? 'shadow-[0_0_10px_rgba(16,185,129,0.7)] animate-halo-glow' : 'shadow-none'}`}
                 value={selectedDate}
                 onChange={(e) => {
                   setSelectedDate(e.target.value);
                   setSelectedTime('');
                   setSelectedSeats([]);
+                  setNotification('¡Perfecto! Ahora selecciona una hora.');
                 }}
                 disabled={!selectedBranch}
               >
-                <option value="">Selecciona una fecha</option>
+                <option value="">Elige una fecha</option>
                 {availableDates.map((date) => (
                   <option key={date.date} value={date.date}>
                     {new Date(date.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -175,17 +200,18 @@ function SeatSelector() {
               </select>
             </div>
             <div className="mb-4">
-              <label className="block mb-2 font-medium">Hora:</label>
+              <label className="block mb-2 font-medium text-gray-700">Hora <span className="text-red-500">*</span></label>
               <select
-                className="w-full p-2 border rounded"
+                className={`w-full p-2 border rounded text-gray-800 focus:ring-2 focus:ring-blue-500 ${selectedDate && !selectedTime ? 'shadow-[0_0_10px_rgba(239,68,68,0.7)] animate-halo-pulse' : selectedTime ? 'shadow-[0_0_10px_rgba(16,185,129,0.7)] animate-halo-glow' : 'shadow-none'}`}
                 value={selectedTime}
                 onChange={(e) => {
                   setSelectedTime(e.target.value);
                   setSelectedSeats([]);
+                  setNotification('¡Listo! Ahora elige tus asientos.');
                 }}
                 disabled={!selectedDate || availableTimes.length === 0}
               >
-                <option value="">Selecciona una hora</option>
+                <option value="">Elige una hora</option>
                 {availableTimes.map((time) => (
                   <option key={time} value={time}>{time}</option>
                 ))}
@@ -194,7 +220,8 @@ function SeatSelector() {
           </div>
 
           {/* Panel de asientos */}
-          <div className="w-full md:w-2/4 bg-white p-4 rounded-lg shadow-md">
+          <div className="w-full md:w-2/4 bg-white p-6 rounded-lg shadow-xl border-t-4 border-yellow-400 hover:shadow-2xl transition">
+            <h2 className="text-xl font-bold mb-4 text-yellow-700">Elige tus asientos</h2>
             <div className="flex flex-col items-center">
               <div className="flex mb-2">
                 {Array.from({ length: 15 }, (_, i) => (
@@ -221,31 +248,48 @@ function SeatSelector() {
                 </div>
               ))}
             </div>
+            <div className="mt-4 text-sm text-gray-600 flex justify-center gap-4">
+              <span>🟢 Disponible</span>
+              <span>🟡 Seleccionado</span>
+              <span>🔴 Ocupado</span>
+            </div>
+            {selectedSeats.length > 0 && (
+              <p className="mt-4 text-center text-green-600 font-semibold">
+                ¡Genial! Has seleccionado {selectedSeats.length} asiento(s). Confirma ahora.
+              </p>
+            )}
           </div>
 
           {/* Temporizador */}
-          <div className="w-full md:w-1/4 bg-white p-4 rounded-lg shadow-md text-center">
-            <p className="mb-2"><strong>Tiempo para elegir:</strong></p>
-            <p className="text-2xl font-bold">{formatTime(timeLeft)}</p>
+          <div className={`w-full md:w-1/4 p-6 rounded-lg shadow-xl text-center transition-all ${timeLeft <= 30 ? 'bg-red-100 border-l-4 border-red-500 animate-pulse' : 'bg-white border-l-4 border-green-500'}`}>
+            <p className="mb-2 text-lg font-semibold text-gray-700">¡Apresúrate!</p>
+            <p className={`text-3xl font-bold ${timeLeft <= 30 ? 'text-red-600' : 'text-green-600'}`}>
+              {formatTime(timeLeft)}
+            </p>
+            <p className="mt-2 text-sm text-gray-500">Tiempo restante (hasta 11:48 PM CST)</p>
           </div>
         </div>
 
         {notification && <p className="text-red-600 mt-2 text-center">{notification}</p>}
 
-        <div className="mt-6 text-center">
+        <div className="mt-6 text-center bg-gradient-to-r from-blue-500 to-purple-600 p-6 rounded-lg shadow-2xl animate-bounce-slow" ref={confirmButtonRef}>
+          <p className="text-white text-xl mb-4">
+            ¡Confirma ahora y obtén palomitas gratis 🎁! Más de 300 fans ya están listos para esta función.
+          </p>
           <button
-            className={`bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition ${isButtonDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`bg-yellow-400 text-black px-8 py-4 rounded-full font-bold text-xl hover:bg-yellow-500 transition-transform hover:scale-105 shadow-lg ${isButtonDisabled ? 'opacity-50 cursor-not-allowed' : ''} ${highlightConfirmButton ? 'shadow-[0_0_15px_rgba(59,130,246,0.9)] animate-halo-glow' : ''}`}
             disabled={isButtonDisabled}
             onClick={() => {
               if (isButtonDisabled) {
                 setNotification('Por favor, completa todas las selecciones y elige al menos un asiento.');
               } else {
-                alert('¡Reserva confirmada con éxito!');
+                alert('¡Reserva confirmada con éxito! Te hemos regalado palomitas gratis.');
               }
             }}
           >
-            Confirmar pedido
+            ¡Asegura tu lugar mágico ahora!
           </button>
+          <p className="text-white text-sm mt-4">Reserva segura | Cancelación gratuita</p>
         </div>
       </main>
 
