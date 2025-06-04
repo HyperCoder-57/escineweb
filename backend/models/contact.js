@@ -1,27 +1,28 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db.config');
 
-const Movie = sequelize.define('Movie', {
+const Contact = sequelize.define('Contact', {
   id: {
     type: DataTypes.INTEGER,
     autoIncrement: true,
     primaryKey: true,
   },
-  title: {
+  name: {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  genre: {
+  email: {
     type: DataTypes.STRING,
     allowNull: false,
   },
-  duration: {
-    type: DataTypes.INTEGER,
+  message: {
+    type: DataTypes.TEXT,
     allowNull: false,
   },
-  poster: {
-    type: DataTypes.STRING,
+  timestamp: {
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW,
   },
 });
 
-module.exports = Movie;
+module.exports = Contact;

@@ -1,15 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { getSeats, reserveSeat } = require('../controllers/reservationController');
+const { createReview, getReviewsByMovie } = require('../controllers/reviewController');
 const auth = require('../middleware/auth');
 const { check } = require('express-validator');
 
-router.get('/seats', getSeats);
-router.post('/reserve', [
+router.post('/', [
   auth,
   check('movieId').isInt(),
-  check('showtimeId').isInt(),
-  check('seatId').isInt(),
-], reserveSeat);
+  check('rating').isInt({ min: 1, max: 5 }),
+], createReview);
+router.get('/:movieId', getReviewsByMovie);
 
 module.exports = router;
