@@ -5,6 +5,10 @@ import Profile from './pages/Profile';
 import MovieList from './components/MovieList';
 import ReservationSummary from './components/ReservationSummary';
 import SeatSelector from './components/SeatSelector';
+import Contact from './pages/contact';
+import PrivacyPolicy from './pages/privacy';
+import Reviews from './pages/reviews';
+ 
 
 function App() {
   return (
@@ -17,10 +21,15 @@ function App() {
         <Route path="/seat/:id" element={<SeatSelector />} />
         <Route path="/auth" element={<Login />} />
         <Route path="/movielist" element={<MovieList />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/reviews" element={<Reviews />} />
         
       </Routes>
     </BrowserRouter>
   );
 }
+ 
+
 
 export default App;

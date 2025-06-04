@@ -1,23 +1,27 @@
-import { Link, useParams } from 'react-router-dom';
+// frontend/src/pages/SeatSelector.jsx
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import logo from '../assets/logo.png';
 import { useState, useEffect, useRef } from 'react';
+import Footer from '../components/Footer';
 
 function SeatSelector() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [selectedSeats, setSelectedSeats] = useState([]);
-  const [reservedSeats, setReservedSeats] = useState([]); // Reservas del usuario actual
-  const [globalReservedSeats, setGlobalReservedSeats] = useState({}); // Reservas de "otros usuarios"
-  const [selectedBranch, setSelectedBranch] = useState('');
-  const [selectedDate, setSelectedDate] = useState('');
-  const [selectedTime, setSelectedTime] = useState('');
+  const [reservedSeats, setReservedSeats] = useState([]);
+  const [globalReservedSeats, setGlobalReservedSeats] = useState({});
+  const [selectedBranch, setSelectedBranch] = useState('Cinepolis Perisur'); // Valor predeterminado
+  const [selectedDate, setSelectedDate] = useState('2025-05-30'); // Valor predeterminado
+  const [selectedTime, setSelectedTime] = useState('2:00 pm'); // Valor predeterminado
   const [timeLeft, setTimeLeft] = useState(300);
   const [notification, setNotification] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [seats, setSeats] = useState([]);
   const [hasScrolled, setHasScrolled] = useState(false);
   const [highlightConfirmButton, setHighlightConfirmButton] = useState(false);
-  const [isLoggedIn] = useState(true); // Estado simulado para el avatar
+  const [isAuthenticated, setIsAuthenticated] = useState(true); // Forzar autenticación para pruebas
   const confirmButtonRef = useRef(null);
-  const [selectedCount, setSelectedCount] = useState(0); // Contador de asientos seleccionados
+  const [selectedCount, setSelectedCount] = useState(0);
 
   const movie = { title: "The Passion", id: parseInt(id) || 1 };
 
@@ -71,13 +75,20 @@ function SeatSelector() {
   const availableTimes = currentDateData.times || [];
 
   useEffect(() => {
+    // Simulación de autenticación (forzar true para pruebas)
+    // const auth = localStorage.getItem('authToken');
+    // setIsAuthenticated(!!auth);
+    setIsAuthenticated(true); // Temporal para pruebas
+  }, []);
+
+  useEffect(() => {
     if (!selectedBranch || !selectedDate || !selectedTime) {
       setSeats([]);
       setGlobalReservedSeats((prev) => {
         const key = `${selectedBranch}-${selectedDate}-${selectedTime}`;
         return { ...prev, [key]: [] };
       });
-      setSelectedCount(0); // Reiniciar contador al cambiar selección
+      setSelectedCount(0);
       return;
     }
 
@@ -108,25 +119,24 @@ function SeatSelector() {
 
     if (seat.status === 'available') {
       if (selectedCount >= 5 && !selectedSeats.includes(seatId)) {
-        setNotification('¡Has alcanzado el límite de 5 asientos! Confirma tu selección o deselecciona alguno para continuar. 😊');
+        setNotification('¡Has alcanzado el límite de 5 asientos! Confirma tu selección o deselecciona alguno.');
         return;
       }
-      setSelectedSeats((prev) =>
-        prev.includes(seatId)
+      setSelectedSeats((prev) => {
+        const newSeats = prev.includes(seatId)
           ? prev.filter((id) => id !== seatId)
-          : [...prev, seatId]
-      );
-      setSelectedCount((prev) =>
-        selectedSeats.includes(seatId) ? prev - 1 : prev + 1
-      );
+          : [...prev, seatId];
+        setSelectedCount(newSeats.length); // Sincronizar selectedCount
+        return newSeats;
+      });
     } else if (seat.status === 'reserved') {
-      setNotification('Lo sentimos, este asiento está reservado por otro usuario. ¡Elige otro para asegurar tu lugar! 🎬');
+      setNotification('Este asiento está reservado por otro usuario. ¡Elige otro!');
     }
   };
 
   useEffect(() => {
     if (timeLeft <= 0) {
-      setNotification('Tiempo agotado. Por favor, reinicie la selección.');
+      setNotification('Tiempo agotado. Por favor, reinicia la selección.');
       setSelectedSeats([]);
       setReservedSeats([]);
       setHasScrolled(false);
@@ -134,7 +144,7 @@ function SeatSelector() {
         const key = `${selectedBranch}-${selectedDate}-${selectedTime}`;
         return { ...prev, [key]: [] };
       });
-      setSelectedCount(0); // Reiniciar contador al agotar tiempo
+      setSelectedCount(0);
       return;
     }
     const timer = setInterval(() => {
@@ -159,6 +169,7 @@ function SeatSelector() {
           const updatedReserved = currentReserved.filter((seatId) => !selectedSeats.includes(seatId));
           return { ...prev, [key]: updatedReserved };
         });
+        setSelectedCount(0);
       }, 5000);
 
       return () => clearTimeout(timeout);
@@ -175,9 +186,9 @@ function SeatSelector() {
           const updatedReserved = currentReserved.filter((seatId) => !reservedSeats.includes(seatId));
           return { ...prev, [key]: updatedReserved };
         });
-        setNotification('Tus asientos reservados han expirado. ¡Selecciona de nuevo para no perder tu lugar! 🎥');
-        setSelectedCount(0); // Reiniciar contador al expirar reservas
-      }, 300000); // 5 minutos = 300,000 ms
+        setNotification('Tus asientos reservados han expirado. ¡Selecciona de nuevo!');
+        setSelectedCount(0);
+      }, 300000);
       return () => clearTimeout(timeout);
     }
   }, [reservedSeats, selectedBranch, selectedDate, selectedTime]);
@@ -195,26 +206,64 @@ function SeatSelector() {
     }
   }, [selectedCount, hasScrolled]);
 
+  // Log para depuración (eliminar en producción)
+  useEffect(() => {
+    console.log({
+      selectedBranch,
+      selectedDate,
+      selectedTime,
+      selectedCount,
+      timeLeft,
+      isAuthenticated,
+      isButtonDisabled: !selectedBranch || !selectedDate || !selectedTime || selectedCount === 0 || timeLeft <= 0 || !isAuthenticated,
+    });
+  }, [selectedBranch, selectedDate, selectedTime, selectedCount, timeLeft, isAuthenticated]);
+
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
-  const isButtonDisabled = !selectedBranch || !selectedDate || !selectedTime || (selectedCount === 0) || timeLeft <= 0;
+  const isButtonDisabled = !selectedBranch || !selectedDate || !selectedTime || selectedCount === 0 || timeLeft <= 0 || !isAuthenticated;
 
   const handleAvatarClick = () => {
-    alert(isLoggedIn ? "Bienvenido, usuario!" : "Por favor inicia sesión.");
+    if (isAuthenticated) {
+      navigate('/profile');
+    } else {
+      setNotification('¡Inicia sesión para continuar!');
+      setTimeout(() => navigate('/auth'), 2000);
+    }
   };
 
+  const debouncedSearch = (query) => {
+    console.log(`Buscando: ${query}`);
+  };
+
+  const handleSearchChange = (value) => {
+    setSearchQuery(value);
+    debouncedSearch(value);
+  };
+
+  const dismissNotification = () => setNotification('');
+
+  const currentDateTime = new Date().toLocaleString('es-MX', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 animate-bg-fade relative overflow-hidden">
-      {/* Partículas de fondo (efecto estelar) */}
-      <div className="absolute inset-0 opacity-10">
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 animate-bg text-gray-100 relative overflow-hidden">
+      {/* Partículas */}
+      <div className="absolute inset-0 opacity-20 z-0">
         {[...Array(50)].map((_, i) => (
           <span
             key={i}
-            className="absolute w-1 h-1 bg-white rounded-full animate-twinkle"
+            className="absolute w-1 h-1 bg-gray-100 rounded-full animate-twinkle"
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
@@ -225,52 +274,60 @@ function SeatSelector() {
       </div>
 
       {/* Header */}
-      <header className="bg-blue-800 bg-opacity-90 text-white p-4 shadow-lg z-10">
+      <header className="bg-gray-900 bg-opacity-90 text-gray-100 p-4 shadow-lg z-10">
         <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <Link to="/" className="flex-shrink-0">
-            <img src={logo} alt="Cinema Logo" className="max-h-16 w-auto object-contain" />
+            <img src={logo} alt="EsCine Logo" className="max-h-20 w-auto object-contain" loading="lazy" />
           </Link>
           <nav className="flex flex-col md:flex-row gap-2 md:gap-4 mb-2 md:mb-0">
-            <Link to="/" className="px-4 py-2 bg-blue-700 rounded-lg hover:bg-blue-600 transition-all text-base font-semibold">Inicio</Link>
-            <Link to="/reviews" className="px-4 py-2 bg-blue-700 rounded-lg hover:bg-blue-600 transition-all text-base font-semibold">Reseñas</Link>
-            <Link to="/contact" className="px-4 py-2 bg-blue-700 rounded-lg hover:bg-blue-600 transition-all text-base font-semibold">Contacto</Link>
+            <Link to="/" className="px-4 py-2 bg-indigo-800 rounded-lg hover:bg-indigo-700 transition-all text-base font-body font-semibold">Inicio</Link>
+            <Link to="/reviews" className="px-4 py-2 bg-transparent border-2 border-indigo-800 rounded-lg hover:bg-indigo-800 transition-all text-base font-body font-semibold">Reseñas</Link>
+            <Link to="/contact" className="px-4 py-2 bg-transparent border-2 border-indigo-800 rounded-lg hover:bg-indigo-800 transition-all text-base font-body font-semibold">Contacto</Link>
           </nav>
           <div className="relative">
             <input
               type="text"
+              value={searchQuery}
+              onChange={(e) => handleSearchChange(e.target.value)}
               placeholder="Buscar tu próxima aventura..."
-              className="px-4 py-2 rounded-lg text-black w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="px-4 py-2 rounded-lg bg-gray-100 text-gray-900 w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-indigo-600"
+              aria-label="Buscar películas"
+              aria-describedby="search-description"
             />
-            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-amber-400">🔍</span>
+            <span id="search-description" className="sr-only">Busca películas por título</span>
+            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-indigo-600">🔍</span>
           </div>
-          <div className="flex flex-col items-center cursor-pointer" onClick={handleAvatarClick}>
+          <button
+            className="flex flex-col items-center cursor-pointer"
+            onClick={handleAvatarClick}
+            aria-label={isAuthenticated ? "Ver perfil" : "Iniciar sesión"}
+          >
             <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center hover:bg-gray-400 transition-all">
-              <span className="text-xl text-black">👤</span>
+              <span className="text-xl text-gray-900">👤</span>
             </div>
-            <span className="text-sm mt-1 font-medium">{isLoggedIn ? "Usuario" : "Invitado"}</span>
-          </div>
+            <span className="text-sm font-body font-medium">{isAuthenticated ? "Usuario" : "Invitado"}</span>
+          </button>
         </div>
       </header>
 
-      {/* Banner de urgencia */}
-      <div className="bg-gradient-to-r from-amber-500 to-yellow-600 p-4 text-white text-center mb-6 animate-pulse-slow relative z-10">
-        <p className="text-sm font-bold">
-          ¡Últimos asientos disponibles para esta función! Más de 300 fans ya reservaron.
+      {/* Banner */}
+      <div className="bg-gradient-to-r from-indigo-800 to-purple-800 p-3 text-center text-gray-100 mb-2 shadow-md animate-pulse-slow relative z-10" aria-live="polite">
+        <p className="text-base font-body font-semibold">
+          ¡Últimos asientos para {movie.title} hoy, {currentDateTime}! <strong>Reserva ahora.</strong>
         </p>
       </div>
 
-      {/* Cuerpo */}
+      {/* Main Content */}
       <main className="container mx-auto p-4 flex-grow relative z-10">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row gap-6">
           {/* Panel de selección */}
-          <div className="w-full md:w-1/4 bg-gray-900 p-6 rounded-lg shadow-2xl border-l-4 border-amber-400 hover:shadow-amber-400/50 transition-all text-white">
-            <h2 className="text-xl font-bold mb-4">Selecciona tu función</h2>
+          <div className="w-full md:w-1/4 bg-gray-900 p-6 rounded-lg shadow-2xl animate-pulse-slow">
+            <h2 className="text-xl font-heading font-bold text-gold-400 mb-4">Selecciona tu función</h2>
             <div className="mb-4">
-              <label className="block mb-2 font-medium">Sucursal <span className="text-red-400">*</span></label>
+              <label htmlFor="branch" className="block mb-2 font-body font-medium text-gray-300">Sucursal <span className="text-red-800">*</span></label>
               <select
-                className={`w-full p-2 border rounded bg-gray-800 text-white focus:outline-none focus:ring-2 ${
-                  !selectedBranch ? 'border-red-500 focus:ring-red-500 animate-pulse' : 'border-gray-600 focus:ring-amber-400'
-                }`}
+                id="branch"
+                className={`w-full p-2 rounded-lg bg-gray-800 border ${!selectedBranch ? 'border-red-800 focus:ring-red-800 animate-pulse' : 'border-gray-600 focus:ring-indigo-600'} text-gray-100 focus:outline-none focus:ring-2`}
                 value={selectedBranch}
                 onChange={(e) => {
                   setSelectedBranch(e.target.value);
@@ -279,22 +336,24 @@ function SeatSelector() {
                   setSelectedSeats([]);
                   setReservedSeats([]);
                   setHasScrolled(false);
-                  setSelectedCount(0); // Reiniciar contador al cambiar sucursal
+                  setSelectedCount(0);
                   setNotification('¡Buen comienzo! Ahora elige una fecha.');
                 }}
+                aria-required="true"
+                aria-describedby="branch-description"
               >
-                <option value="">Elige tu sucursal primero</option>
+                <option value="">Elige una sucursal</option>
                 {branchesData.map((branch) => (
                   <option key={branch.name} value={branch.name}>{branch.name}</option>
                 ))}
               </select>
+              <span id="branch-description" className="sr-only">Selecciona la sucursal donde deseas ver la película</span>
             </div>
             <div className="mb-4">
-              <label className="block mb-2 font-medium">Fecha <span className="text-red-400">*</span></label>
+              <label htmlFor="date" className="block mb-2 font-body font-medium text-gray-300">Fecha <span className="text-red-800">*</span></label>
               <select
-                className={`w-full p-2 border rounded bg-gray-800 text-white focus:outline-none focus:ring-2 ${
-                  selectedBranch && !selectedDate ? 'border-red-500 focus:ring-red-500 animate-pulse' : selectedDate ? 'border-gray-600 focus:ring-amber-400' : 'border-gray-600'
-                }`}
+                id="date"
+                className={`w-full p-2 rounded-lg bg-gray-800 border ${selectedBranch && !selectedDate ? 'border-red-800 focus:ring-red-800 animate-pulse' : 'border-gray-600 focus:ring-indigo-600'} text-gray-100 focus:outline-none focus:ring-2`}
                 value={selectedDate}
                 onChange={(e) => {
                   setSelectedDate(e.target.value);
@@ -302,10 +361,12 @@ function SeatSelector() {
                   setSelectedSeats([]);
                   setReservedSeats([]);
                   setHasScrolled(false);
-                  setSelectedCount(0); // Reiniciar contador al cambiar fecha
+                  setSelectedCount(0);
                   setNotification('¡Perfecto! Ahora selecciona una hora.');
                 }}
                 disabled={!selectedBranch}
+                aria-required="true"
+                aria-describedby="date-description"
               >
                 <option value="">Elige una fecha</option>
                 {availableDates.map((date) => (
@@ -314,48 +375,47 @@ function SeatSelector() {
                   </option>
                 ))}
               </select>
+              <span id="date-description" className="sr-only">Selecciona la fecha de la función</span>
             </div>
             <div className="mb-4">
-              <label className="block mb-2 font-medium">Hora <span className="text-red-400">*</span></label>
+              <label htmlFor="time" className="block mb-2 font-body font-medium text-gray-300">Hora <span className="text-red-800">*</span></label>
               <select
-                className={`w-full p-2 border rounded bg-gray-800 text-white focus:outline-none focus:ring-2 ${
-                  selectedDate && !selectedTime ? 'border-red-500 focus:ring-red-500 animate-pulse' : selectedTime ? 'border-gray-600 focus:ring-amber-400' : 'border-gray-600'
-                }`}
+                id="time"
+                className={`w-full p-2 rounded-lg bg-gray-800 border ${selectedDate && !selectedTime ? 'border-red-800 focus:ring-red-800 animate-pulse' : 'border-gray-600 focus:ring-indigo-600'} text-gray-100 focus:outline-none focus:ring-2`}
                 value={selectedTime}
                 onChange={(e) => {
                   setSelectedTime(e.target.value);
                   setSelectedSeats([]);
                   setReservedSeats([]);
                   setHasScrolled(false);
-                  setSelectedCount(0); // Reiniciar contador al cambiar hora
-                  if (selectedCount === 0) {
-                    setNotification('¡Listo! Ahora elige tus asientos.');
-                  } else {
-                    setNotification('');
-                  }
+                  setSelectedCount(0);
+                  setNotification('¡Listo! Ahora elige tus asientos.');
                 }}
                 disabled={!selectedDate || availableTimes.length === 0}
+                aria-required="true"
+                aria-describedby="time-description"
               >
                 <option value="">Elige una hora</option>
                 {availableTimes.map((time) => (
                   <option key={time} value={time}>{time}</option>
                 ))}
               </select>
+              <span id="time-description" className="sr-only">Selecciona la hora de la función</span>
             </div>
           </div>
 
-          {/* Panel de asientos */}
-          <div className="w-full md:w-2/4 bg-gray-900 p-6 rounded-lg shadow-2xl border-t-4 border-amber-400 hover:shadow-amber-400/50 transition-all">
-            <h2 className="text-xl font-bold mb-4 text-white">Elige tus asientos</h2>
+          {/* Panel de Asientos */}
+          <div className="w-full md:w-2/4 bg-gray-900 p-6 rounded-lg shadow-2xl animate-pulse-slow">
+            <h2 className="text-xl font-heading font-bold text-gold-400 mb-4">Elige tus asientos</h2>
             <div className="flex flex-col items-center">
               <div className="flex mb-2">
                 {Array.from({ length: 15 }, (_, i) => (
-                  <span key={i} className="w-6 text-center text-xs text-gray-300">{i + 1}</span>
+                  <span key={i} className="w-6 text-center text-xs font-body text-gray-300">{i + 1}</span>
                 ))}
               </div>
               {seats.map((row, rowIndex) => (
                 <div key={rowIndex} className="flex items-center mb-1">
-                  <span className="w-6 text-center text-xs text-gray-300 mr-2">{String.fromCharCode(65 + rowIndex)}</span>
+                  <span className="w-6 text-center text-xs font-body text-gray-300 mr-2">{String.fromCharCode(65 + rowIndex)}</span>
                   <div className="grid gap-1 grid-cols-[repeat(15,_1fr)]">
                     {row.map((seat, colIndex) => {
                       const seatId = `${rowIndex}-${colIndex}`;
@@ -365,67 +425,67 @@ function SeatSelector() {
                       const isOccupied = seat.status === 'occupied';
 
                       return (
-                        <div
+                        <button
                           key={seat.id}
                           className={`w-6 h-6 flex items-center justify-center rounded
-                            ${(isSelected || isUserReserved) ? 'bg-blue-500' : isOtherReserved ? 'bg-yellow-400' : isOccupied ? 'bg-red-600' : 'bg-green-700'}
-                            ${!isOccupied && !isOtherReserved && timeLeft > 0 ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                            ${(isSelected || isUserReserved) ? 'bg-indigo-600' : isOtherReserved ? 'bg-gold-400' : isOccupied ? 'bg-red-800' : 'bg-teal-600'}
+                            ${!isOccupied && !isOtherReserved && timeLeft > 0 ? 'cursor-pointer hover:bg-indigo-500' : 'cursor-not-allowed'}
+                            transition-all`}
                           onClick={() => handleSeatClick(rowIndex, colIndex)}
+                          disabled={isOccupied || isOtherReserved || timeLeft <= 0}
+                          aria-label={`Asiento ${String.fromCharCode(65 + rowIndex)}${colIndex + 1} ${isSelected ? 'seleccionado' : isUserReserved ? 'reservado' : isOtherReserved ? 'reservado por otro' : isOccupied ? 'ocupado' : 'disponible'}`}
+                          aria-selected={isSelected || isUserReserved}
                         >
-                          <span className="text-xs">🎟️</span>
-                        </div>
+                          <span className="text-sm text-gray-200">🎟️</span>
+                        </button>
                       );
                     })}
                   </div>
                 </div>
               ))}
             </div>
-            <div className="mt-4 text-sm text-gray-300 flex justify-center gap-4">
+            <div className="mt-4 text-sm font-body text-gray-300 flex justify-center gap-4">
               <span>🟢 Disponible</span>
               <span>🔵 Seleccionado</span>
-              <span>🟡 Ya Reservados</span>
+              <span>🟡 Reservado</span>
               <span>🔴 Ocupado</span>
             </div>
             {selectedCount > 0 && (
-              <p className="mt-4 text-center text-green-400 font-semibold">
+              <p className="mt-4 text-center text-teal-600 font-body font-semibold">
                 ¡Genial! Has seleccionado {selectedCount} asiento(s). Confirma ahora.
               </p>
             )}
             {reservedSeats.length > 0 && (
-              <p className="mt-2 text-center text-blue-400 font-semibold">
+              <p className="mt-2 text-center text-gray-300 font-body font-semibold">
                 Tienes {reservedSeats.length} asiento(s) reservados por 5 minutos. ¡Confirma pronto!
               </p>
             )}
           </div>
 
           {/* Temporizador */}
-          <div className={`w-full md:w-1/4 p-6 rounded-lg shadow-2xl text-center transition-all text-white ${
-            timeLeft <= 30 ? 'bg-gray-900 border-l-4 border-red-600 animate-pulse' : 'bg-gray-900 border-l-4 border-amber-400'
-          }`}>
-            <p className="mb-2 text-lg font-semibold">¡Apresúrate!</p>
-            <p className={`text-3xl font-bold ${timeLeft <= 30 ? 'text-red-400' : 'text-green-400'}`}>
+          <div className={`w-full md:w-1/4 p-6 rounded-lg shadow-2xl text-center animate-pulse-slow ${timeLeft <= 30 ? 'bg-gray-900 border-l-4 border-red-800' : 'bg-gray-900 border-l-4 border-indigo-600'}`}>
+            <p className="mb-2 text-lg font-heading font-semibold text-gray-100">¡Apresúrate!</p>
+            <p className={`text-3xl font-heading font-bold ${timeLeft <= 30 ? 'text-red-800' : 'text-teal-600'}`}>
               {formatTime(timeLeft)}
             </p>
-            <p className="mt-2 text-sm text-gray-400">Tiempo restante (hasta 2:00 PM CST)</p>
+            <p className="mt-2 text-sm font-body text-gray-400">Tiempo restante (hasta {currentDateTime})</p>
           </div>
         </div>
 
-        {notification && <p className="text-red-400 mt-2 text-center">{notification}</p>}
-
-        <div className="mt-6 text-center bg-gradient-to-r from-blue-600 to-purple-600 p-6 rounded-lg shadow-2xl animate-pulse-slow" ref={confirmButtonRef}>
-          <p className="text-white text-xl mb-4">
-            ¡Confirma ahora y obtén palomitas gratis 🎁! Más de 300 fans ya están listos para esta función.
+        <div className="mt-6 text-center bg-gradient-to-r from-indigo-800 to-purple-800 p-6 rounded-lg shadow-2xl animate-pulse-slow" ref={confirmButtonRef}>
+          <p className="text-gray-100 text-xl font-body mb-4">
+            ¡Confirma ahora y obtén palomitas gratis 🎁! Más de 300 fans ya están listos.
           </p>
           <button
-            className={`bg-gradient-to-r from-amber-500 to-yellow-600 text-white px-8 py-4 rounded-full font-bold text-xl hover:from-amber-400 hover:to-yellow-500 transition-all shadow-lg hover:shadow-amber-400/50 animate-pulse-slow ${
-              isButtonDisabled ? 'opacity-50 cursor-not-allowed' : ''
-            } ${highlightConfirmButton ? 'shadow-[0_0_15px_rgba(255,193,7,0.9)] animate-pulse-slow' : ''}`}
+            className={`bg-gradient-to-r from-amber-500 to-yellow-600 text-white px-6 py-3 rounded-full font-body font-semibold text-lg hover:from-amber-400 hover:to-yellow-500 transition-all hover:shadow-amber-400/50 hover:scale-105 hover-sparkle relative
+              ${isButtonDisabled ? 'opacity-50 cursor-not-allowed' : ''}
+              ${highlightConfirmButton ? 'shadow-[0_0_15px_rgba(245,158,11,0.9)] animate-pulse-slow' : ''}`}
             disabled={isButtonDisabled}
             onClick={() => {
               if (isButtonDisabled) {
                 setNotification('Por favor, completa todas las selecciones y elige al menos un asiento.');
               } else {
-                alert('¡Reserva confirmada con éxito! Te hemos regalado palomitas gratis.');
+                setNotification('¡Reserva confirmada con éxito! Te hemos regalado palomitas gratis.');
                 setSelectedSeats([]);
                 setReservedSeats([]);
                 setHasScrolled(false);
@@ -433,24 +493,37 @@ function SeatSelector() {
                   const key = `${selectedBranch}-${selectedDate}-${selectedTime}`;
                   return { ...prev, [key]: [] };
                 });
-                setSelectedCount(0); // Reiniciar contador al confirmar
+                setSelectedCount(0);
+                setTimeout(() => {
+                  navigate('/profile');
+                }, 2000);
               }
             }}
+            aria-disabled={isButtonDisabled}
+            aria-label="Confirmar reserva de asientos"
           >
             ¡Asegura tu lugar mágico ahora!
           </button>
-          <p className="text-white text-sm mt-4">Reserva segura | Cancelación gratuita</p>
+          <p className="text-gray-100 text-sm font-body mt-4">Reserva segura | Cancelación gratuita</p>
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white p-4">
-        <div className="container mx-auto text-center">
-          <p className="text-sm font-medium">
-            A Mr. Tony Production<br />EsCine © 2025
-          </p>
+      {/* Notificación Toast */}
+      {notification && (
+        <div className="fixed bottom-4 right-4 bg-teal-600 text-gray-100 p-4 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in z-50" role="alert" aria-live="polite">
+          <span className="font-body">{notification}</span>
+          <button
+            onClick={dismissNotification}
+            className="text-gray-100 hover:text-gray-300 text-xl"
+            aria-label="Cerrar notificación"
+          >
+            ✕
+          </button>
         </div>
-      </footer>
+      )}
+
+{/* Footer */}
+<Footer />
     </div>
   );
 }

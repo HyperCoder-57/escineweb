@@ -1,10 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom';
-import logo from '../assets/logo.png';
 import { useState } from 'react';
+import logo from '../assets/logo.png';
+import Footer from '../components/Footer';
 
 function Login() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState('login'); // Controlar modo: 'login' o 'signup'
+  const [mode, setMode] = useState('login');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -15,8 +16,8 @@ function Login() {
     email: '',
     password: '',
   });
+  const [notification, setNotification] = useState('');
 
-  // Validaciones
   const validateName = (name) => {
     const nameRegex = /^[A-Za-z\s]{2,50}$/;
     if (!name) return 'El nombre es obligatorio';
@@ -38,7 +39,6 @@ function Login() {
     return '';
   };
 
-  // Manejar cambios en los inputs y validar en tiempo real
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -46,7 +46,6 @@ function Login() {
       [name]: value,
     }));
 
-    // Validar el campo que cambió
     if (name === 'name') {
       setErrors((prev) => ({ ...prev, name: validateName(value) }));
     } else if (name === 'email') {
@@ -56,7 +55,6 @@ function Login() {
     }
   };
 
-  // Verificar si el formulario es válido para habilitar el botón
   const isFormValid = () => {
     const nameValid = mode === 'signup' ? !validateName(formData.name) : true;
     const emailValid = !validateEmail(formData.email);
@@ -64,11 +62,9 @@ function Login() {
     return nameValid && emailValid && passwordValid;
   };
 
-  // Manejar envío del formulario
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Validar todos los campos antes de enviar
     const nameError = mode === 'signup' ? validateName(formData.name) : '';
     const emailError = validateEmail(formData.email);
     const passwordError = validatePassword(formData.password);
@@ -82,27 +78,35 @@ function Login() {
     if (nameError || emailError || passwordError) return;
 
     if (mode === 'login') {
-      // Simular login con mensaje de conversión
-      alert(`¡Bienvenido de nuevo, ${formData.email}! Disfruta de tu experiencia en EsCine.`);
-      navigate('/');
+      setNotification(`¡Bienvenido de nuevo, ${formData.email}! Disfruta de tu experiencia en EsCine.`);
+      setTimeout(() => navigate('/'), 2000);
     } else {
-      // Simular signup con mensaje de conversión
-      alert(`¡Bienvenido, ${formData.name}! Te hemos regalado un boleto gratis para hoy.`);
-      navigate('/');
+      setNotification(`¡Bienvenido, ${formData.name}! Te hemos regalado un boleto gratis para hoy.`);
+      setTimeout(() => navigate('/'), 2000);
     }
-    // Limpiar formulario
     setFormData({ name: '', email: '', password: '' });
     setErrors({ name: '', email: '', password: '' });
   };
 
+  const dismissNotification = () => setNotification('');
+
+  const currentDateTime = new Date().toLocaleString('es-MX', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 animate-bg-fade relative overflow-hidden">
-      {/* Partículas de fondo (efecto estelar) */}
-      <div className="absolute inset-0 opacity-10">
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 animate-bg text-gray-100 relative overflow-hidden">
+      {/* Partículas */}
+      <div className="absolute inset-0 opacity-20">
         {[...Array(50)].map((_, i) => (
           <span
             key={i}
-            className="absolute w-1 h-1 bg-white rounded-full animate-twinkle"
+            className="absolute w-1 h-1 bg-gray-100 rounded-full animate-twinkle"
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
@@ -113,61 +117,60 @@ function Login() {
       </div>
 
       {/* Header */}
-      <header className="bg-blue-800 bg-opacity-90 text-white p-4 shadow-lg z-10">
-        <div className="container mx-auto flex items-center justify-between gap-4">
-          <Link to="/">
-            <img
-              src={logo}
-              alt="Cinema Logo"
-              className="max-h-16 w-auto object-contain"
-            />
+      <header className="bg-gray-900 bg-opacity-90 text-gray-100 p-4 shadow-lg z-10">
+        <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <Link to="/" className="flex-shrink-0">
+            <img src={logo} alt="EsCine Logo" className="max-h-20 w-auto object-contain" loading="lazy" />
           </Link>
-          <h1 className="text-xl md:text-2xl font-bold">
-            ¡Inicia sesión o regístrate para vivir la magia del cine!
-          </h1>
+          <nav className="flex flex-col md:flex-row gap-2 md:gap-4 mb-2 md:mb-0">
+            <Link to="/" className="px-4 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-500 transition-all text-base font-body font-semibold">Inicio</Link>
+            <Link to="/reviews" className="px-4 py-2 bg-transparent border-2 border-indigo-600 rounded-lg hover:bg-indigo-600 transition-all text-base font-body font-semibold">Reseñas</Link>
+            <Link to="/contact" className="px-4 py-2 bg-transparent border-2 border-indigo-600 rounded-lg hover:bg-indigo-600 transition-all text-base font-body font-semibold">Contacto</Link>
+          </nav>
         </div>
       </header>
 
-      {/* Cuerpo */}
-      <main className="container mx-auto p-4 flex-grow flex items-center justify-center relative z-10">
-        <div className="bg-gray-900 p-6 rounded-lg shadow-2xl max-w-md w-full text-white">
-          {/* Banner de urgencia y prueba social */}
-          <div className="bg-gradient-to-r from-amber-500 to-yellow-600 p-4 rounded mb-6 text-center text-sm animate-pulse-slow relative z-10">
-            <p className="font-bold">
-              ¡Únete hoy, 30 de mayo de 2025, a millones de fans del cine! 
-              <strong>¡Oferta especial: Regístrate ahora y obtén un boleto gratis por tiempo limitado!</strong>
-            </p>
-          </div>
+      {/* Banner */}
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-3 text-center text-gray-100 mb-2 shadow-md animate-glow relative z-10" aria-live="polite">
+        <p className="text-base font-body font-semibold">
+          ¡Únete hoy, {currentDateTime}, a millones de cinéfilos! <strong>Regístrate ahora y obtén un boleto gratis.</strong>
+        </p>
+      </div>
 
-          {/* Toggle entre Login y Signup */}
+      {/* Main Content */}
+      <main className="container mx-auto p-4 flex-grow flex items-center justify-center relative z-10">
+        <div className="bg-gray-900 p-8 rounded-lg shadow-2xl max-w-md w-full text-gray-100 animate-glow">
+          <h1 className="text-2xl md:text-3xl font-heading font-bold text-gold-400 mb-6 text-center">
+            {mode === 'login' ? 'Inicia Sesión en EsCine' : 'Regístrate en EsCine'}
+          </h1>
+
+          {/* Toggle */}
           <div className="flex justify-center mb-6">
             <button
               onClick={() => setMode('login')}
-              className={`px-4 py-2 rounded-l-lg ${
-                mode === 'login'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-700 text-gray-300'
-              } transition-all`}
+              className={`px-4 py-2 rounded-l-lg font-body font-semibold ${
+                mode === 'login' ? 'bg-indigo-600 text-gray-100' : 'bg-gray-800 text-gray-400'
+              } transition-all focus:outline-none focus:ring-2 focus:ring-indigo-400`}
+              aria-pressed={mode === 'login'}
             >
-              Iniciar sesión
+              Iniciar Sesión
             </button>
             <button
               onClick={() => setMode('signup')}
-              className={`px-4 py-2 rounded-r-lg ${
-                mode === 'signup'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-700 text-gray-300'
-              } transition-all`}
+              className={`px-4 py-2 rounded-r-lg font-body font-semibold ${
+                mode === 'signup' ? 'bg-indigo-600 text-gray-100' : 'bg-gray-800 text-gray-400'
+              } transition-all focus:outline-none focus:ring-2 focus:ring-indigo-400`}
+              aria-pressed={mode === 'signup'}
             >
               Registrarse
             </button>
           </div>
 
           {/* Formulario */}
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} className="space-y-4">
             {mode === 'signup' && (
-              <div className="mb-4">
-                <label className="block mb-2 font-medium" htmlFor="name">
+              <div>
+                <label className="block mb-2 font-body font-medium" htmlFor="name">
                   Nombre
                 </label>
                 <input
@@ -176,20 +179,21 @@ function Login() {
                   name="name"
                   value={formData.name}
                   onChange={handleInputChange}
-                  className={`w-full p-2 border rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 ${
-                    errors.name ? 'border-red-500 focus:ring-red-500' : 'border-gray-600 focus:ring-amber-400'
-                  }`}
+                  className={`w-full p-2 rounded-lg bg-gray-800 border ${
+                    errors.name ? 'border-red-500 focus:ring-red-500' : 'border-gray-600 focus:ring-indigo-400'
+                  } text-gray-100 focus:outline-none focus:ring-2`}
                   placeholder="Tu nombre"
                   required
+                  aria-describedby="name-error"
                 />
                 {errors.name && (
-                  <p className="mt-1 text-sm text-red-400">{errors.name}</p>
+                  <p id="name-error" className="mt-1 text-sm text-red-400 font-body">{errors.name}</p>
                 )}
               </div>
             )}
-            <div className="mb-4">
-              <label className="block mb-2 font-medium" htmlFor="email">
-                Correo electrónico
+            <div>
+              <label className="block mb-2 font-body font-medium" htmlFor="email">
+                Correo Electrónico
               </label>
               <input
                 type="email"
@@ -197,18 +201,19 @@ function Login() {
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
-                className={`w-full p-2 border rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 ${
-                  errors.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-600 focus:ring-amber-400'
-                }`}
+                className={`w-full p-2 rounded-lg bg-gray-800 border ${
+                  errors.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-600 focus:ring-indigo-400'
+                } text-gray-100 focus:outline-none focus:ring-2`}
                 placeholder="tu@correo.com"
                 required
+                aria-describedby="email-error"
               />
               {errors.email && (
-                <p className="mt-1 text-sm text-red-400">{errors.email}</p>
+                <p id="email-error" className="mt-1 text-sm text-red-400 font-body">{errors.email}</p>
               )}
             </div>
-            <div className="mb-6">
-              <label className="block mb-2 font-medium" htmlFor="password">
+            <div>
+              <label className="block mb-2 font-body font-medium" htmlFor="password">
                 Contraseña
               </label>
               <input
@@ -217,42 +222,54 @@ function Login() {
                 name="password"
                 value={formData.password}
                 onChange={handleInputChange}
-                className={`w-full p-2 border rounded-lg bg-gray-800 text-white focus:outline-none focus:ring-2 ${
-                  errors.password ? 'border-red-500 focus:ring-red-500' : 'border-gray-600 focus:ring-amber-400'
-                }`}
+                className={`w-full p-2 rounded-lg bg-gray-800 border ${
+                  errors.password ? 'border-red-500 focus:ring-red-500' : 'border-gray-600 focus:ring-indigo-400'
+                } text-gray-100 focus:outline-none focus:ring-2`}
                 placeholder="********"
                 required
+                aria-describedby="password-error password-hint"
               />
+              <p id="password-hint" className="mt-1 text-xs text-gray-400 font-body">
+                Mínimo 8 caracteres, 1 mayúscula, 1 minúscula, 1 número, 1 carácter especial (@$!%*?&)
+              </p>
               {errors.password && (
-                <p className="mt-1 text-sm text-red-400">{errors.password}</p>
+                <p id="password-error" className="mt-1 text-sm text-red-400 font-body">{errors.password}</p>
               )}
             </div>
             <button
               type="submit"
               disabled={!isFormValid()}
-              className={`w-full px-4 py-2 rounded-full text-white transition-all shadow-lg ${
+              className={`w-full px-4 py-2 rounded-full font-body font-semibold transition-all hover-sparkle relative ${
                 isFormValid()
-                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 hover:shadow-amber-400/50 animate-pulse-slow'
-                  : 'bg-gray-600 cursor-not-allowed'
+                  ? 'bg-indigo-600 text-gray-100 hover:bg-indigo-500 hover:shadow-indigo-400/50'
+                  : 'bg-gray-600 text-gray-400 cursor-not-allowed'
               }`}
             >
-              {mode === 'login' ? 'Iniciar sesión ahora' : 'Registrarse y obtener mi boleto'}
+              {mode === 'login' ? 'Iniciar Sesión Ahora' : 'Registrarse y Obtener Boleto'}
             </button>
-            <p className="mt-4 text-center text-sm text-gray-400">
+            <p className="mt-4 text-center text-sm text-gray-400 font-body">
               EsCine es una plataforma segura y confiable. ¡Únete a la comunidad y vive la magia del cine!
             </p>
           </form>
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white p-4">
-        <div className="container mx-auto text-center">
-          <p className="text-sm font-medium">
-            A Mr. Tony Production<br />EsCine © 2025
-          </p>
+      {/* Notificación Toast */}
+      {notification && (
+        <div className="fixed bottom-4 right-4 bg-teal-500 text-gray-100 p-4 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in z-50" role="alert">
+          <span className="font-body">{notification}</span>
+          <button
+            onClick={dismissNotification}
+            className="text-gray-100 hover:text-gray-300 text-xl"
+            aria-label="Cerrar notificación"
+          >
+            ✕
+          </button>
         </div>
-      </footer>
+      )}
+
+{/* Footer */}
+<Footer />
     </div>
   );
 }

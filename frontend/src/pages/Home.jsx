@@ -1,14 +1,17 @@
 import { Link, useNavigate } from 'react-router-dom';
-import logo from '../assets/logo.png';
 import { useState, useEffect, useRef } from 'react';
+import { debounce } from 'lodash';
+import logo from '../assets/logo.png';
+import Footer from '../components/Footer';
 
 function Home() {
   const navigate = useNavigate();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(3600); // 1 hora para el boleto gratis (en segundos)
-  const [currentIndexEstrenos, setCurrentIndexEstrenos] = useState(0);
-  const [currentIndexTodas, setCurrentIndexTodas] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(3600);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentIndexEstrenos, setCurrentIndexEstrenos] = useState(1);
+  const [currentIndexTodas, setCurrentIndexTodas] = useState(1);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showBanner, setShowBanner] = useState(true);
   const carouselEstrenosRef = useRef(null);
@@ -68,8 +71,8 @@ function Home() {
     { id: 23, title: "La tumba de las luciérnagas", poster: "https://image.tmdb.org/t/p/w500/juKTAn2AuoE9MvCNvf3kwZrt1t4.jpg" },
     { id: 24, title: "La vida es bella", poster: "https://image.tmdb.org/t/p/w500/aZ7MFlKPfB02Lr9NwZQ4vsYRgcy.jpg" },
     { id: 25, title: "El Club de la Lucha", poster: "https://image.tmdb.org/t/p/w500/sgTAWJFaB2kBvdQxRGabYFiQqEK.jpg" },
-    { id: 26, title: "Cinema Paradiso", poster: "https://image.tmdb.org/t/p/w500/hHwsr3t5n7VVUbPyU8VZswn0jkL.jpg" },
-    { id: 27, title: "Ciudad de Dios", poster: "https://image.tmdb.org/t/p/w500/2MztAexSbCVszezV0bKMKZPJAZf.jpg" },
+    { id: 26, title: "Cinema Paradiso", poster: "https://image.tmdb.org/t/p/w500/hHwsr3t5n7VVlide0A6cmb3UVU8.jpg" },
+    { id: 27, title: "Ciudad de Dios", poster: "https://image.tmdb.org/t/p/w500/2MztAexSdCVszezV0bKMKZPJAZf.jpg" },
     { id: 28, title: "O Auto da Compadecida", poster: "https://image.tmdb.org/t/p/w500/xWCKF7hgOicb3A0XiY13SdlwRcn.jpg" },
     { id: 29, title: "Psicosis", poster: "https://image.tmdb.org/t/p/w500/xFbnc2QPG5H5gYWsGbZT4q8Akya.jpg" },
     { id: 30, title: "El señor de los anillos: La comunidad del anillo", poster: "https://image.tmdb.org/t/p/w500/9xtH1RmAzQ0rrMBNUMXstb2s3er.jpg" },
@@ -147,21 +150,10 @@ function Home() {
     { id: 102, title: "Mommy", poster: "https://image.tmdb.org/t/p/w500/1mjhmc2iG8Oe5WTqevECTUQ5iWP.jpg" },
     { id: 103, title: "Matrix", poster: "https://image.tmdb.org/t/p/w500/tpW2X2DvxtTHJ61iJ7zNYYrJihs.jpg" },
     { id: 104, title: "Evangelion: 3.0+1.01 Thrice Upon a Time", poster: "https://image.tmdb.org/t/p/w500/2QiEVEePwGGwzCWaxrVR5B4LLnu.jpg" },
-    
   ];
 
-  // Crear arrays extendidos para simular el carousel infinito
-  const extendedEstrenos = [
-    ...estrenos.slice(-1),
-    ...estrenos,
-    ...estrenos.slice(0, 1),
-  ];
-
-  const extendedTodas = [
-    ...todasPeliculas.slice(-1),
-    ...todasPeliculas,
-    ...todasPeliculas.slice(0, 1),
-  ];
+  const extendedEstrenos = [...estrenos.slice(-1), ...estrenos, ...estrenos.slice(0, 1)];
+  const extendedTodas = [...todasPeliculas.slice(-1), ...todasPeliculas, ...todasPeliculas.slice(0, 1)];
 
   const handleAvatarClick = () => setShowDialog(true);
   const handleCloseDialog = () => setShowDialog(false);
@@ -173,12 +165,10 @@ function Home() {
   const handleCloseBanner = () => setShowBanner(false);
 
   useEffect(() => {
-    if (timeLeft <= 0) return;
-    const timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
+    const timer = setInterval(() => setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0)), 1000);
     return () => clearInterval(timer);
-  }, [timeLeft]);
+  }, []);
 
-  // Manejo del carousel infinito para Estrenos
   const handlePrevEstrenos = () => {
     if (isTransitioning) return;
     setIsTransitioning(true);
@@ -191,7 +181,6 @@ function Home() {
     setCurrentIndexEstrenos((prev) => prev + 1);
   };
 
-  // Manejo del carousel infinito para Todas las Películas
   const handlePrevTodas = () => {
     if (isTransitioning) return;
     setIsTransitioning(true);
@@ -204,38 +193,41 @@ function Home() {
     setCurrentIndexTodas((prev) => prev + 1);
   };
 
-  // Ajuste para el carousel infinito (Estrenos)
   const handleTransitionEndEstrenos = () => {
     setIsTransitioning(false);
     if (currentIndexEstrenos === 0) {
       setCurrentIndexEstrenos(estrenos.length);
       carouselEstrenosRef.current.style.transition = 'none';
-      carouselEstrenosRef.current.style.transform = `translateX(-${estrenos.length * (100 / 3)}%)`;
+      carouselEstrenosRef.current.style.transform = `translateX(-${estrenos.length * (100 / 4)}%)`;
     } else if (currentIndexEstrenos === extendedEstrenos.length - 1) {
       setCurrentIndexEstrenos(1);
       carouselEstrenosRef.current.style.transition = 'none';
-      carouselEstrenosRef.current.style.transform = `translateX(-${(100 / 3)}%)`;
+      carouselEstrenosRef.current.style.transform = `translateX(-${(100 / 4)}%)`;
     }
   };
 
-  // Ajuste para el carousel infinito (Todas las Películas)
   const handleTransitionEndTodas = () => {
     setIsTransitioning(false);
     if (currentIndexTodas === 0) {
       setCurrentIndexTodas(todasPeliculas.length);
       carouselTodasRef.current.style.transition = 'none';
-      carouselTodasRef.current.style.transform = `translateX(-${todasPeliculas.length * (100 / 3)}%)`;
+      carouselTodasRef.current.style.transform = `translateX(-${todasPeliculas.length * (100 / 4)}%)`;
     } else if (currentIndexTodas === extendedTodas.length - 1) {
       setCurrentIndexTodas(1);
       carouselTodasRef.current.style.transition = 'none';
-      carouselTodasRef.current.style.transform = `translateX(-${(100 / 3)}%)`;
+      carouselTodasRef.current.style.transform = `translateX(-${(100 / 4)}%)`;
     }
   };
 
   useEffect(() => {
-    setCurrentIndexEstrenos(1); // Iniciar en el primer elemento real
-    setCurrentIndexTodas(1);
+    carouselEstrenosRef.current.style.transition = 'transform 0.5s cubic-bezier(0.4,0,0.2,1)';
+    carouselTodasRef.current.style.transition = 'transform 0.5s cubic-bezier(0.4,0,0.2,1)';
   }, []);
+
+  const debouncedSearch = debounce((value) => {
+    // Implement search logic here (e.g., filter movies)
+    console.log('Searching for:', value);
+  }, 300);
 
   const formatTime = (seconds) => {
     const hours = Math.floor(seconds / 3600);
@@ -246,12 +238,12 @@ function Home() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 animate-bg-fade relative overflow-hidden">
-      {/* Partículas de fondo (efecto estelar) */}
-      <div className="absolute inset-0 opacity-10">
+      {/* Particles */}
+      <div className="absolute inset-0 opacity-20">
         {[...Array(50)].map((_, i) => (
           <span
             key={i}
-            className="absolute w-1 h-1 bg-white rounded-full animate-twinkle"
+            className="absolute w-1 h-1 bg-gray-100 rounded-full animate-twinkle"
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
@@ -262,74 +254,84 @@ function Home() {
       </div>
 
       {/* Header */}
-      <header className="bg-blue-800 bg-opacity-90 text-white p-4 shadow-lg z-10">
+      <header className="bg-gray-900 bg-opacity-90 text-gray-100 p-4 shadow-lg z-10">
         <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <Link to="/" className="flex-shrink-0">
-            <img src={logo} alt="Cinema Logo" className="max-h-16 w-auto object-contain" />
+            <img src={logo} alt="Cinema Logo" className="max-h-20 w-auto object-contain" />
           </Link>
           <nav className="flex flex-col md:flex-row gap-2 md:gap-4 mb-2 md:mb-0">
-            <Link to="/" className="px-4 py-2 bg-blue-700 rounded-lg hover:bg-blue-600 transition-all text-base font-semibold">Inicio</Link>
-            <Link to="/reviews" className="px-4 py-2 bg-blue-700 rounded-lg hover:bg-blue-600 transition-all text-base font-semibold">Reseñas</Link>
-            <Link to="/contact" className="px-4 py-2 bg-blue-700 rounded-lg hover:bg-blue-600 transition-all text-base font-semibold">Contacto</Link>
+            <Link to="/" className="px-4 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-500 transition-all text-base font-body font-semibold">Inicio</Link>
+            <Link to="/reviews" className="px-4 py-2 bg-transparent border-2 border-indigo-600 rounded-lg hover:bg-indigo-600 transition-all text-base font-body font-semibold">Reseñas</Link>
+            <Link to="/contact" className="px-4 py-2 bg-transparent border-2 border-indigo-600 rounded-lg hover:bg-indigo-600 transition-all text-base font-body font-semibold">Contacto</Link>
           </nav>
           <div className="relative">
             <input
               type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                debouncedSearch(e.target.value);
+              }}
               placeholder="Buscar tu próxima aventura..."
-              className="px-4 py-2 rounded-lg text-black w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-amber-400"
+              className="px-4 py-2 rounded-lg bg-gray-100 text-gray-900 w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              aria-label="Buscar películas"
+              aria-describedby="search-description"
             />
-            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-amber-400">🔍</span>
+            <span id="search-description" className="sr-only">Busca películas por título</span>
+            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-indigo-400">🔍</span>
           </div>
           <div className="flex flex-col items-center cursor-pointer" onClick={handleAvatarClick}>
-            <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center hover:bg-gray-400 transition-all">
-              <span className="text-xl text-black">👤</span>
+            <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center hover:bg-gray-400 transition-all" aria-label={isLoggedIn ? "Perfil de usuario" : "Iniciar sesión"}>
+              <span className="text-xl text-gray-900">👤</span>
             </div>
-            <span className="text-sm mt-1 font-medium">{isLoggedIn ? "Usuario" : "Invitado"}</span>
+            <span className="text-sm font-body font-medium">{isLoggedIn ? "Usuario" : "Invitado"}</span>
           </div>
         </div>
       </header>
 
-      {/* Banner de urgencia y prueba social */}
+      {/* Banner */}
       {showBanner && (
-        <div className="bg-gradient-to-r from-amber-500 to-yellow-600 p-4 text-white text-center mb-6 animate-pulse-slow relative z-10">
-          <span
-            className="absolute top-2 right-2 text-white hover:text-gray-300 cursor-pointer text-xl"
+        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-3 text-gray-100 text-center mb-6 shadow-md animate-glow relative z-10" aria-live="polite">
+          <button
+            className="absolute top-2 right-2 text-gray-100 hover:text-gray-300 text-xl"
             onClick={handleCloseBanner}
+            aria-label="Cerrar banner"
           >
             ✕
-          </span>
-          <p className="text-sm font-bold">
-            ¡Únete hoy, 24 de mayo de 2025, a millones de cinéfilos! 
-            <span className="block md:inline">Regístrate ahora y recibe un boleto gratis (queda {formatTime(timeLeft)}).</span>
+          </button>
+          <p className="text-base font-body font-bold text-gray-100">
+            ¡Únete al mundo del cine mágico! 
+            <span className="block md:inline">Regístrate ahora y desbloquea un boleto gratis (queda {formatTime(timeLeft)}).</span>
           </p>
           <button
             onClick={handleAuth}
-            className="mt-2 bg-blue-700 text-white px-4 py-2 rounded-full hover:bg-blue-600 transition-all shadow-lg hover:shadow-amber-400/50"
+            className="mt-2 bg-teal-500 text-gray-100 px-4 py-2 rounded-full hover:bg-teal-400 transition-all shadow-lg hover:shadow-teal-400/50 hover-sparkle relative"
           >
-            ¡Regístrate y vive la magia!
+            ¡Vive la magia!
           </button>
         </div>
       )}
 
-      {/* Diálogo Modal */}
+      {/* Modal Dialog */}
       {showDialog && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-75 z-50">
-          <div className="bg-gray-900 p-6 rounded-xl shadow-2xl w-full max-w-sm transform animate-fade-in">
-            <span
-              className="absolute top-2 right-2 text-white hover:text-gray-300 cursor-pointer text-xl"
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-75 z-50" role="dialog" aria-modal="true">
+          <div className="bg-gray-900 p-6 rounded-xl shadow-2xl w-full max-w-sm transform animate-fade-in relative">
+            <button
+              className="absolute top-2 right-2 text-gray-100 hover:text-gray-300 text-xl"
               onClick={handleCloseDialog}
+              aria-label="Cerrar diálogo"
             >
               ✕
-            </span>
-            <h3 className="text-lg font-bold text-amber-400 mb-4">Estado de Sesión</h3>
-            <p className="text-white mb-4">
-              {isLoggedIn ? "¡Ya estás listo para la magia del cine!" : "¡Aún no estás dentro de la aventura! Inicia sesión o regístrate para descubrir contenido exclusivo."}
+            </button>
+            <h3 className="text-lg font-heading font-bold   text-gray-100 mb-4">¡Únete al mundo del cine mágico!</h3>
+            <p className="text-gray-100 font-body mb-4">
+              {isLoggedIn ? "¡Estás listo para vivir aventuras épicas en la gran pantalla!" : "¡Embárcate en una aventura! Inicia sesión o regístrate para desbloquear contenido exclusivo."}
             </p>
             {!isLoggedIn && (
               <div className="flex justify-center">
                 <button
                   onClick={handleAuth}
-                  className="bg-amber-500 text-white px-4 py-2 rounded-full hover:bg-amber-400 transition-all shadow-md hover:shadow-amber-600/50"
+                  className="bg-indigo-600 text-gray-100 px-4 py-2 rounded-full hover:bg-indigo-500 transition-all shadow-md hover:shadow-indigo-600/50 hover-sparkle relative"
                 >
                   Iniciar sesión o registrarse
                 </button>
@@ -339,39 +341,44 @@ function Home() {
         </div>
       )}
 
-      {/* Cuerpo */}
+      {/* Main Content */}
       <main className="container mx-auto p-4 flex-grow relative z-10">
-        {/* Sección Explorar */}
         <section className="mb-8 text-center">
-          <h2 className="text-3xl font-extrabold text-amber-400 mb-4 animate-fade-in-up">¡Embárcate en tu aventura cinematográfica!</h2>
+          <h2 className="text-3xl font-heading font-extrabold text-gray-100 mb-4 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
+            ¡Embárcate en tu aventura cinematográfica!
+          </h2>
           <button
             onClick={handleExplore}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-full text-lg font-semibold hover:from-blue-500 hover:to-purple-500 transition-all shadow-lg hover:shadow-amber-400/50 animate-pulse-slow"
+            className="bg-gradient-to-r from-indigo-600 to-purple-600 text-gray-100 px-4 py-2 rounded-full text-lg font-body font-semibold hover:from-indigo-500 hover:to-purple-500 transition-all shadow-lg hover:shadow-indigo-400/50 hover-sparkle relative"
           >
             Explorar ahora
           </button>
         </section>
 
-        {/* Sección Estrenos - Carousel Infinito */}
         <section className="mb-8">
-          <h2 className="text-3xl font-extrabold text-white mb-4 animate-fade-in-up">Estrenos</h2>
+          <h2 className="text-3xl font-heading font-extrabold text-gray-100 mb-4 animate-fade-in-up" style={{ animationDelay: '0.4s' }}>
+            ¡Nuevas Aventuras en la Gran Pantalla!
+          </h2>
           <div className="relative">
             <button
               onClick={handlePrevEstrenos}
-              className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-all z-10"
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handlePrevEstrenos()}
+              tabIndex={0}
+              className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-indigo-600 text-gray-100 p-3 rounded-full hover:bg-indigo-500 transition-all z-10"
+              aria-label="Películas anteriores (Estrenos)"
             >
               ◄
             </button>
             <div className="flex justify-center">
-              <div className="w-full max-w-4xl overflow-hidden">
+              <div className="w-full max-w-5xl overflow-hidden">
                 <div
                   ref={carouselEstrenosRef}
-                  className="flex transition-transform duration-500 ease-in-out"
-                  style={{ transform: `translateX(-${currentIndexEstrenos * (100 / 3)}%)` }}
+                  className="flex transition-transform duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  style={{ transform: `translateX(-${currentIndexEstrenos * (100 / 4)}%)` }}
                   onTransitionEnd={handleTransitionEndEstrenos}
                 >
                   {extendedEstrenos.map((movie, index) => (
-                    <div key={`${movie.id}-${index}`} className="w-48 flex-shrink-0 px-2">
+                    <div key={`${movie.id}-${index}`} className="w-56 flex-shrink-0 px-2">
                       <Link to={`/reservation/${movie.id}`} className="block">
                         <div className="relative group">
                           <div className="aspect-[2/3] overflow-hidden rounded-lg">
@@ -379,10 +386,12 @@ function Home() {
                               src={movie.poster}
                               alt={movie.title}
                               className="w-full h-full object-cover rounded-lg shadow-md transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg"
+                              loading="lazy"
+                              onError={(e) => (e.target.src = 'https://via.placeholder.com/150x225?text=Poster+Not+Found')}
                             />
                           </div>
                           <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-2">
-                            <p className="text-white text-sm font-semibold">{movie.title}</p>
+                            <p className="text-gray-100 text-base font-body font-semibold">{movie.title}</p>
                           </div>
                         </div>
                       </Link>
@@ -393,33 +402,40 @@ function Home() {
             </div>
             <button
               onClick={handleNextEstrenos}
-              className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-all z-10"
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleNextEstrenos()}
+              tabIndex={0}
+              className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-indigo-600 text-gray-100 p-3 rounded-full hover:bg-indigo-500 transition-all z-10"
+              aria-label="Siguientes películas (Estrenos)"
             >
               ►
             </button>
           </div>
         </section>
 
-        {/* Sección Todas las Películas - Carousel Infinito */}
         <section>
-          <h2 className="text-3xl font-extrabold text-white mb-4 animate-fade-in-up">Todas las Películas</h2>
+          <h2 className="text-3xl font-heading font-extrabold text-gray-100 mb-4 animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
+            Explora un Universo de Historias
+          </h2>
           <div className="relative">
             <button
               onClick={handlePrevTodas}
-              className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-all z-10"
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handlePrevTodas()}
+              tabIndex={0}
+              className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-indigo-600 text-gray-100 p-3 rounded-full hover:bg-indigo-500 transition-all z-10"
+              aria-label="Películas anteriores (Todas)"
             >
               ◄
             </button>
             <div className="flex justify-center">
-              <div className="w-full max-w-4xl overflow-hidden">
+              <div className="w-full max-w-5xl overflow-hidden">
                 <div
                   ref={carouselTodasRef}
-                  className="flex transition-transform duration-500 ease-in-out"
-                  style={{ transform: `translateX(-${currentIndexTodas * (100 / 3)}%)` }}
+                  className="flex transition-transform duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]"
+                  style={{ transform: `translateX(-${currentIndexTodas * (100 / 4)}%)` }}
                   onTransitionEnd={handleTransitionEndTodas}
                 >
                   {extendedTodas.map((movie, index) => (
-                    <div key={`${movie.id}-${index}`} className="w-48 flex-shrink-0 px-2">
+                    <div key={`${movie.id}-${index}`} className="w-56 flex-shrink-0 px-2">
                       <Link to={`/reservation/${movie.id}`} className="block">
                         <div className="relative group">
                           <div className="aspect-[2/3] overflow-hidden rounded-lg">
@@ -427,10 +443,12 @@ function Home() {
                               src={movie.poster}
                               alt={movie.title}
                               className="w-full h-full object-cover rounded-lg shadow-md transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg"
+                              loading="lazy"
+                              onError={(e) => (e.target.src = 'https://via.placeholder.com/150x225?text=Poster+Not+Found')}
                             />
                           </div>
                           <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-2">
-                            <p className="text-white text-sm font-semibold">{movie.title}</p>
+                            <p className="text-gray-100 text-base font-body font-semibold">{movie.title}</p>
                           </div>
                         </div>
                       </Link>
@@ -441,7 +459,10 @@ function Home() {
             </div>
             <button
               onClick={handleNextTodas}
-              className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-75 transition-all z-10"
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleNextTodas()}
+              tabIndex={0}
+              className="absolute right-0 top-1/2 transform -translate-y-1/2 bg-indigo-600 text-gray-100 p-3 rounded-full hover:bg-indigo-500 transition-all z-10"
+              aria-label="Siguientes películas (Todas)"
             >
               ►
             </button>
@@ -449,14 +470,8 @@ function Home() {
         </section>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white p-4">
-        <div className="container mx-auto text-center">
-          <p className="text-sm font-medium">
-            A Mr. Tony Production <br />EsCine © 2025
-          </p>
-        </div>
-      </footer>
+{/* Footer */}
+<Footer />
     </div>
   );
 }

@@ -1,59 +1,99 @@
 import { Link, useNavigate } from 'react-router-dom';
-import logo from '../assets/logo.png';
 import { useState, useEffect } from 'react';
+import logo from '../assets/logo.png';
+import Footer from '../components/Footer';
 
 function Profile() {
   const navigate = useNavigate();
-  const [user, setUser] = useState({
+  const initialUser = {
     name: "Usuario Ejemplo",
     email: "usuario@example.com",
-    membership: "Premium",
-    bookings: 3,
-    lastLogin: "2025-05-29 14:30 CST",
+    password: "pass123",
+    bookings: [
+      { id: "1", title: "The Passion", date: "2025-06-05", time: "14:00", status: "active" },
+      { id: "16", title: "Epic Adventure", date: "2025-06-01", time: "10:00", status: "canceled" },
+    ],
+  };
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem('user');
+    return savedUser ? { ...initialUser, ...JSON.parse(savedUser), bookings: Array.isArray(JSON.parse(savedUser).bookings) ? JSON.parse(savedUser).bookings : initialUser.bookings } : initialUser;
   });
   const [isEditing, setIsEditing] = useState(false);
-  const [editedUser, setEditedUser] = useState(user);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editedUser, setEditedUser] = useState({ name: user.name, email: user.email, currentPassword: '', newPassword: '' });
+  const [errors, setErrors] = useState({});
   const [notification, setNotification] = useState('');
+  const [showCancelConfirm, setShowCancelConfirm] = useState(null);
 
   useEffect(() => {
-    // Simulación de carga de datos del usuario (reemplazar con API real)
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) setUser(JSON.parse(savedUser));
-  }, []);
+    setEditedUser({ name: user.name, email: user.email, currentPassword: '', newPassword: '' });
+    localStorage.setItem('user', JSON.stringify(user));
+  }, [user]);
 
-  const handleEdit = () => {
-    setIsEditing(true);
-    setEditedUser(user);
+  const validateInputs = () => {
+    const newErrors = {};
+    if (!editedUser.name.trim()) newErrors.name = "El nombre es obligatorio";
+    if (!editedUser.email || !/\S+@\S+\.\S+/.test(editedUser.email)) newErrors.email = "Correo inválido";
+    if (isEditing && (editedUser.newPassword || editedUser.name !== user.name || editedUser.email !== user.email)) {
+      if (!editedUser.currentPassword) newErrors.currentPassword = "Contraseña actual requerida";
+      else if (editedUser.currentPassword !== user.password) newErrors.currentPassword = "Contraseña actual incorrecta";
+    }
+    if (editedUser.newPassword && editedUser.newPassword.length < 8) newErrors.newPassword = "La nueva contraseña debe tener al menos 8 caracteres";
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = () => {
-    setUser(editedUser);
-    localStorage.setItem('user', JSON.stringify(editedUser));
-    setIsEditing(false);
-    setNotification('¡Perfil actualizado con éxito! 🎉');
+  const handleSave = async () => {
+    if (!validateInputs()) return;
+    setIsSaving(true);
+    setTimeout(() => {
+      setUser({ ...user, name: editedUser.name, email: editedUser.email, password: editedUser.newPassword || user.password });
+      setIsEditing(false);
+      setNotification('¡Perfil actualizado correctamente!');
+      setIsSaving(false);
+      setTimeout(() => setNotification(''), 3000);
+    }, 1000);
+  };
+
+  const handleCancelBooking = (bookingId) => {
+    setShowCancelConfirm(bookingId);
+  };
+
+  const confirmCancelBooking = (bookingId) => {
+    setUser({
+      ...user,
+      bookings: user.bookings.map((b) => (b.id === bookingId ? { ...b, status: "canceled" } : b)),
+    });
+    setShowCancelConfirm(null);
+    setNotification('¡Reserva cancelada con éxito!');
     setTimeout(() => setNotification(''), 3000);
   };
 
   const handleLogout = () => {
-    // Simulación de cierre de sesión (reemplazar con lógica real)
     localStorage.removeItem('user');
-    setNotification('Sesión cerrada. ¡Vuelve pronto! 🎬');
-    setTimeout(() => navigate('/'), 2000);
+    setNotification('Sesión cerrada. ¡Vuelve pronto!');
+    setTimeout(() => navigate('/'), 1000);
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setEditedUser((prev) => ({ ...prev, [name]: value }));
-  };
+  const dismissNotification = () => setNotification('');
+
+  const currentDateTime = new Date().toLocaleString('es-MX', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
 
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 animate-bg-fade relative overflow-hidden">
-      {/* Partículas de fondo (efecto estelar) */}
-      <div className="absolute inset-0 opacity-10">
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 animate-bg text-gray-100 relative overflow-hidden">
+      {/* Partículas */}
+      <div className="absolute inset-0 opacity-20">
         {[...Array(50)].map((_, i) => (
           <span
             key={i}
-            className="absolute w-1 h-1 bg-white rounded-full animate-twinkle"
+            className="absolute w-1 h-1 bg-gray-100 rounded-full animate-twinkle"
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
@@ -64,126 +104,248 @@ function Profile() {
       </div>
 
       {/* Header */}
-      <header className="bg-blue-800 bg-opacity-90 text-white p-4 shadow-lg z-10">
+      <header className="bg-gray-900 bg-opacity-90 text-gray-100 p-4 shadow-lg z-10">
         <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <Link to="/" className="flex-shrink-0">
-            <img src={logo} alt="Cinema Logo" className="max-h-16 w-auto object-contain" />
+            <img src={logo} alt="EsCine Logo" className="max-h-20 w-auto object-contain" loading="lazy" />
           </Link>
           <nav className="flex flex-col md:flex-row gap-2 md:gap-4 mb-2 md:mb-0">
-            <Link to="/" className="px-4 py-2 bg-blue-700 rounded-lg hover:bg-blue-600 transition-all text-base font-semibold">Inicio</Link>
-            <Link to="/reviews" className="px-4 py-2 bg-blue-700 rounded-lg hover:bg-blue-600 transition-all text-base font-semibold">Reseñas</Link>
-            <Link to="/contact" className="px-4 py-2 bg-blue-700 rounded-lg hover:bg-blue-600 transition-all text-base font-semibold">Contacto</Link>
-            <Link to="/seat/1" className="px-4 py-2 bg-blue-700 rounded-lg hover:bg-blue-600 transition-all text-base font-semibold">Reservas</Link>
+            <Link to="/" className="px-4 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-500 transition-all text-base font-body font-semibold">Inicio</Link>
+            <Link to="/reviews" className="px-4 py-2 bg-transparent border-2 border-indigo-600 rounded-lg hover:bg-indigo-600 transition-all text-base font-body font-semibold">Reseñas</Link>
+            <Link to="/contact" className="px-4 py-2 bg-transparent border-2 border-indigo-600 rounded-lg hover:bg-indigo-600 transition-all text-base font-body font-semibold">Contacto</Link>
           </nav>
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Buscar tu próxima aventura..."
-              className="px-4 py-2 rounded-lg text-black w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-amber-400"
-            />
-            <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-amber-400">🔍</span>
-          </div>
-          <div className="flex flex-col items-center cursor-pointer" onClick={() => setNotification('Ya estás en tu perfil! 👤')}>
-            <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center hover:bg-gray-400 transition-all">
-              <span className="text-xl text-black">👤</span>
-            </div>
-            <span className="text-sm mt-1 font-medium">Usuario</span>
-          </div>
         </div>
       </header>
 
-      {/* Banner de urgencia (opcional, adaptado) */}
-      <div className="bg-gradient-to-r from-amber-500 to-yellow-600 p-4 text-white text-center mb-6 animate-pulse-slow relative z-10">
-        <p className="text-sm font-bold">¡Gestiona tu perfil y revisa tus reservas!</p>
+      {/* Banner */}
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-3 text-center text-gray-100 mb-2 shadow-md animate-glow relative z-10" aria-live="polite">
+        <p className="text-base font-body font-semibold">
+          ¡vive la magia del cine!
+        </p>
       </div>
 
-      {/* Cuerpo */}
+      {/* Main Content */}
       <main className="container mx-auto p-4 flex-grow relative z-10">
-        <div className="max-w-3xl mx-auto bg-gray-900 p-6 rounded-lg shadow-2xl border-l-4 border-amber-400 hover:shadow-amber-400/50 transition-all text-white">
-          <h1 className="text-2xl font-bold mb-6">Perfil de Usuario</h1>
-
-          {/* Sección de datos del usuario */}
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Nombre</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  name="name"
-                  value={editedUser.name}
-                  onChange={handleInputChange}
-                  className="w-full p-2 border rounded bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-amber-400"
-                />
-              ) : (
-                <p className="text-lg">{user.name}</p>
+        <div className="max-w-3xl mx-auto bg-gray-900 p-8 rounded-lg shadow-2xl animate-glow">
+          <h1 className="text-3xl font-heading font-bold text-gold-400 mb-6">Perfil de Usuario</h1>
+          <section className="mb-8">
+            <h2 className="text-xl font-heading font-semibold mb-4 text-gray-100">Datos Personales</h2>
+            <div className="space-y-6">
+              <div>
+                <label htmlFor="name" className="block text-base font-body font-medium mb-1 text-gray-300">
+                  Nombre
+                </label>
+                {isEditing ? (
+                  <div>
+                    <input
+                      id="name"
+                      type="text"
+                      name="name"
+                      value={editedUser.name}
+                      onChange={(e) => setEditedUser({ ...editedUser, name: e.target.value })}
+                      className={`w-full p-2 rounded-lg bg-gray-800 border ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-gray-600 focus:ring-indigo-400'} text-gray-100 focus:outline-none focus:ring-2`}
+                      aria-invalid={!!errors.name}
+                      aria-describedby={errors.name ? 'name-error' : undefined}
+                    />
+                    {errors.name && (
+                      <p id="name-error" className="text-red-400 text-sm mt-1 font-body">{errors.name}</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-lg text-gray-100 font-body">{user.name}</p>
+                )}
+              </div>
+              <div>
+                <label htmlFor="email" className="block text-base font-body font-medium mb-1 text-gray-300">
+                  Correo Electrónico
+                </label>
+                {isEditing ? (
+                  <div>
+                    <input
+                      id="email"
+                      type="email"
+                      name="email"
+                      value={editedUser.email}
+                      onChange={(e) => setEditedUser({ ...editedUser, email: e.target.value })}
+                      className={`w-full p-2 rounded-lg bg-gray-800 border ${errors.email ? 'border-red-500 focus:ring-red-500' : 'border-gray-600 focus:ring-indigo-400'} text-gray-100 focus:outline-none focus:ring-2`}
+                      aria-invalid={!!errors.email}
+                      aria-describedby={errors.email ? 'email-error' : undefined}
+                    />
+                    {errors.email && (
+                      <p id="email-error" className="text-red-400 text-sm mt-1 font-body">{errors.email}</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-lg text-gray-100 font-body">{user.email}</p>
+                )}
+              </div>
+              {isEditing && (
+                <>
+                  <div>
+                    <label htmlFor="currentPassword" className="block text-base font-body font-medium mb-1 text-gray-300">
+                      Contraseña Actual
+                    </label>
+                    <input
+                      id="currentPassword"
+                      type="password"
+                      name="currentPassword"
+                      value={editedUser.currentPassword}
+                      onChange={(e) => setEditedUser({ ...editedUser, currentPassword: e.target.value })}
+                      className={`w-full p-2 rounded-lg bg-gray-800 border ${errors.currentPassword ? 'border-red-500 focus:ring-red-500' : 'border-gray-600 focus:ring-indigo-400'} text-gray-100 focus:outline-none focus:ring-2`}
+                      aria-invalid={!!errors.currentPassword}
+                      aria-describedby={errors.currentPassword ? 'currentPassword-error' : undefined}
+                    />
+                    {errors.currentPassword && (
+                      <p id="currentPassword-error" className="text-red-400 text-sm mt-1 font-body">{errors.currentPassword}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label htmlFor="newPassword" className="block text-base font-body font-medium mb-1 text-gray-300">
+                      Nueva Contraseña (Opcional)
+                    </label>
+                    <input
+                      id="newPassword"
+                      type="password"
+                      name="newPassword"
+                      value={editedUser.newPassword}
+                      onChange={(e) => setEditedUser({ ...editedUser, newPassword: e.target.value })}
+                      className={`w-full p-2 rounded-lg bg-gray-800 border ${errors.newPassword ? 'border-red-500 focus:ring-red-500' : 'border-gray-600 focus:ring-indigo-400'} text-gray-100 focus:outline-none focus:ring-2`}
+                      aria-invalid={!!errors.newPassword}
+                      aria-describedby={errors.newPassword ? 'newPassword-error' : undefined}
+                    />
+                    {errors.newPassword && (
+                      <p id="newPassword-error" className="text-red-400 text-sm mt-1 font-body">{errors.newPassword}</p>
+                    )}
+                  </div>
+                </>
               )}
+              <div className="flex gap-4">
+                {isEditing ? (
+                  <>
+                    <button
+                      onClick={handleSave}
+                      className={`bg-indigo-600 px-4 py-2 rounded-full text-gray-100 hover:bg-indigo-500 transition-all hover:shadow-indigo-400/50 hover-sparkle relative ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      disabled={isSaving}
+                    >
+                      {isSaving ? (
+                        <span className="flex items-center">
+                          <svg className="animate-spin h-5 w-5 mr-2 text-gray-100" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                            <path fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                          </svg>
+                          Guardando...
+                        </span>
+                      ) : (
+                        'Guardar'
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setIsEditing(false)}
+                      className="bg-gray-600 px-4 py-2 rounded-full text-gray-100 hover:bg-gray-500 transition-all hover-sparkle relative"
+                    >
+                      Cancelar
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="bg-indigo-600 px-4 py-2 rounded-full text-gray-100 hover:bg-indigo-500 transition-all hover:shadow-indigo-400/50 hover-sparkle relative"
+                  >
+                    Editar
+                  </button>
+                )}
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Correo</label>
-              {isEditing ? (
-                <input
-                  type="email"
-                  name="email"
-                  value={editedUser.email}
-                  onChange={handleInputChange}
-                  className="w-full p-2 border rounded bg-gray-800 text-white focus:outline-none focus:ring-2 focus:ring-amber-400"
-                />
-              ) : (
-                <p className="text-lg">{user.email}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Membresía</label>
-              <p className="text-lg">{user.membership}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Reservas realizadas</label>
-              <p className="text-lg">{user.bookings}</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Último inicio de sesión</label>
-              <p className="text-lg">{user.lastLogin}</p>
-            </div>
-          </div>
-
-          {/* Botones de acción */}
-          <div className="mt-6 flex gap-4">
-            {isEditing ? (
-              <button
-                className="bg-gradient-to-r from-amber-500 to-yellow-600 px-4 py-2 rounded-full hover:from-amber-400 hover:to-yellow-500 transition-all shadow-lg"
-                onClick={handleSave}
-              >
-                Guardar
-              </button>
+          </section>
+          <section>
+            <h2 className="text-xl font-heading font-semibold mb-4 text-gray-100">Historial de Reservas</h2>
+            {user.bookings.length > 0 ? (
+              <div className="space-y-6">
+                {user.bookings.map((booking) => (
+                  <div
+                    key={booking.id}
+                    className={`p-4 rounded-lg shadow-md transition-all duration-200 flex flex-col sm:flex-row sm:items-center sm:justify-between ${booking.status === 'active' ? 'bg-teal-900' : booking.status === 'canceled' ? 'bg-red-900' : 'bg-gray-800'}`}
+                  >
+                    <div>
+                      <p className="text-lg text-gray-100 font-body flex items-center">
+                        <span className="mr-2">{booking.status === 'active' ? '🎟️' : booking.status === 'canceled' ? '❌' : '🕒'}</span>
+                        {booking.title}
+                      </p>
+                      <p className="text-base text-gray-300 font-body">
+                        Fecha: {new Date(booking.date).toLocaleDateString('es-MX')} a las {booking.time}
+                      </p>
+                      <p className="text-base font-body font-medium text-gray-100">
+                        Estado: {booking.status === 'active' ? 'Activa' : booking.status === 'canceled' ? 'Cancelada' : 'Pasada'}
+                      </p>
+                    </div>
+                    {booking.status === 'active' && (
+                      <button
+                        onClick={() => handleCancelBooking(booking.id)}
+                        className="mt-2 sm:mt-0 bg-red-600 px-4 py-2 rounded-full text-gray-100 hover:bg-red-500 transition-all hover:shadow-red-400/50 hover-sparkle relative"
+                        aria-label={`Cancelar reserva para ${booking.title}`}
+                      >
+                        Cancelar Reserva
+                      </button>
+                    )}
+                    {showCancelConfirm === booking.id && (
+                      <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-75 z-50" role="dialog" aria-modal="true">
+                        <div className="bg-gray-900 p-6 rounded-lg shadow-2xl w-full max-w-sm animate-fade-in">
+                          <h3 className="text-xl font-heading font-bold text-gold-400 mb-4">Confirmar Cancelación</h3>
+                          <p className="text-gray-100 font-body mb-4">
+                            ¿Estás seguro de cancelar la reserva para "{booking.title}"?
+                          </p>
+                          <div className="flex justify-center gap-4">
+                            <button
+                              onClick={() => confirmCancelBooking(booking.id)}
+                              className="bg-red-600 px-4 py-2 rounded-full text-gray-100 hover:bg-red-500 hover-sparkle relative"
+                            >
+                              Confirmar
+                            </button>
+                            <button
+                              onClick={() => setShowCancelConfirm(null)}
+                              className="bg-gray-600 px-4 py-2 rounded-full text-gray-100 hover:bg-gray-500 hover-sparkle relative"
+                              aria-label="Cancelar acción"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             ) : (
-              <button
-                className="bg-gradient-to-r from-amber-500 to-yellow-600 px-4 py-2 rounded-full hover:from-amber-400 hover:to-yellow-500 transition-all shadow-lg"
-                onClick={handleEdit}
-              >
-                Editar Perfil
-              </button>
+              <p className="text-gray-300 text-center text-base font-body">No hay reservas aún.</p>
             )}
+          </section>
+          <div className="mt-6 text-center">
             <button
-              className="bg-gradient-to-r from-red-600 to-red-700 px-4 py-2 rounded-full hover:from-red-500 hover:to-red-600 transition-all shadow-lg"
               onClick={handleLogout}
+              className="bg-red-600 px-4 py-2 rounded-full text-gray-100 hover:bg-red-500 transition-all hover:shadow-red-400/50 hover-sparkle relative"
             >
               Cerrar Sesión
             </button>
           </div>
-
-          {/* Notificaciones */}
-          {notification && <p className="mt-4 text-center text-green-400">{notification}</p>}
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white p-4">
-        <div className="container mx-auto text-center">
-          <p className="text-sm font-medium">
-            A Mr. Tony Production<br />EsCine © 2025
-          </p>
+      {/* Notificación Toast */}
+      {notification && (
+        <div className="fixed bottom-4 right-4 bg-teal-500 text-gray-100 p-4 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in z-50" role="alert">
+          <span className="font-body">{notification}</span>
+          <button
+            onClick={dismissNotification}
+            className="text-gray-100 hover:text-gray-300 text-xl"
+            aria-label="Cerrar notificación"
+          >
+            ✕
+          </button>
         </div>
-      </footer>
+      )}
+
+{/* Footer */}
+<Footer />
     </div>
   );
 }
