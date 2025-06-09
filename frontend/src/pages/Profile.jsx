@@ -10,7 +10,7 @@ function Profile() {
     email: "usuario@example.com",
     password: "pass123",
     bookings: [
-      { id: "1", title: "The Passion", date: "2025-06-05", time: "14:00", status: "active" },
+      { id: "1", title: "Sin Límites", date: "2025-06-05", time: "14:00", status: "active" },
       { id: "16", title: "Epic Adventure", date: "2025-06-01", time: "10:00", status: "canceled" },
     ],
   };

@@ -1,7 +1,5 @@
+require('dotenv').config();
 const { Sequelize } = require('sequelize');
-const dotenv = require('dotenv');
-
-dotenv.config();
 
 const sequelize = new Sequelize(
   process.env.DB_NAME,
@@ -11,8 +9,11 @@ const sequelize = new Sequelize(
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
     dialect: 'postgres',
-    logging: false,
+    logging: false, // Desactivar logs para prod
+    dialectOptions: {
+      connectTimeout: 10000,
+      client_encoding: 'UTF8', // Forzar UTF8
+    },
   }
 );
-
 module.exports = sequelize;

@@ -1,40 +1,37 @@
-const sequelize = require('../config/db.config');
-const Movie = require('./movie');
-const User = require('./user');
-const Reservation = require('./reservation');
-const Seat = require('./Seat');
-const Showtime = require('./showtime');
-const Contact = require('./Contact');
-const Review = require('./Review');
+'use strict';
 
-const db = {
-  sequelize,
-  Movie,
-  User,
-  Reservation,
-  Seat,
-  Showtime,
-  Contact,
-  Review,
-};
+const fs = require('fs');
+const path = require('path');
+const Sequelize = require('sequelize');
+const basename = path.basename(__filename);
+const sequelize = require('../config/db.config'); // Usa la instancia existente
+const db = {};
 
-// Definir relaciones
-Movie.hasMany(Showtime, { foreignKey: 'movieId' });
-Showtime.belongsTo(Movie, { foreignKey: 'movieId' });
+fs
+  .readdirSync(__dirname)
+  .filter(file => {
+    return (
+      file.indexOf('.') !== 0 &&
+      file !== basename &&
+      file.slice(-3) === '.js' &&
+      file.indexOf('.test.js') === -1
+    );
+  })
+  .forEach(file => {
+    const model = require(path.join(__dirname, file))(sequelize, Sequelize.DataTypes);
+    db[model.name] = model;
+  });
 
-Showtime.hasMany(Seat, { foreignKey: 'showtimeId' });
-Seat.belongsTo(Showtime, { foreignKey: 'showtimeId' });
+Object.keys(db).forEach(modelName => {
+  if (db[modelName].associate) {
+    db[modelName].associate(db);
+  }
+});
 
-Movie.hasMany(Reservation, { foreignKey: 'movieId' });
-User.hasMany(Reservation, { foreignKey: 'userId' });
-Seat.hasOne(Reservation, { foreignKey: 'seatId' });
-Reservation.belongsTo(Movie, { foreignKey: 'movieId' });
-Reservation.belongsTo(User, { foreignKey: 'userId' });
-Reservation.belongsTo(Seat, { foreignKey: 'seatId' });
+db.sequelize = sequelize;
+db.Sequelize = Sequelize;
 
-Movie.hasMany(Review, { foreignKey: 'movieId' });
-User.hasMany(Review, { foreignKey: 'userId' });
-Review.belongsTo(Movie, { foreignKey: 'movieId' });
-Review.belongsTo(User, { foreignKey: 'userId' });
+// Eliminar las relaciones manuales para evitar conflictos
+// (las asociaciones ahora se manejan en los métodos associate de los modelos)
 
 module.exports = db;

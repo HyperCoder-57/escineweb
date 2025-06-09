@@ -1,24 +1,29 @@
 const { DataTypes } = require('sequelize');
-const sequelize = require('../config/db.config');
 
-const Showtime = sequelize.define('Showtime', {
-  id: {
-    type: DataTypes.INTEGER,
-    autoIncrement: true,
-    primaryKey: true,
-  },
-  movieId: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-  },
-  date: {
-    type: DataTypes.DATE,
-    allowNull: false,
-  },
-  room: {
-    type: DataTypes.STRING,
-    allowNull: false,
-  },
-});
+module.exports = (sequelize) => {
+  const Showtime = sequelize.define('Showtime', {
+    movieId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'Movies',
+        key: 'id',
+      },
+    },
+    date: {
+      type: DataTypes.DATEONLY,
+      allowNull: false,
+    },
+    time: { // Corregido de 'room' a 'time'
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+  });
 
-module.exports = Showtime;
+  Showtime.associate = (models) => {
+    Showtime.belongsTo(models.Movie, { foreignKey: 'movieId' });
+    Showtime.hasMany(models.Seat, { foreignKey: 'showtimeId' });
+  };
+
+  return Showtime;
+};

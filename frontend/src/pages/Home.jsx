@@ -3,10 +3,11 @@ import { useState, useEffect, useRef } from 'react';
 import { debounce } from 'lodash';
 import logo from '../assets/logo.png';
 import Footer from '../components/Footer';
+import { useAuth } from '../context/AuthContext';
 
 function Home() {
   const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { isLoggedIn, login, logout } = useAuth(); // Usar el contexto
   const [showDialog, setShowDialog] = useState(false);
   const [timeLeft, setTimeLeft] = useState(3600);
   const [searchQuery, setSearchQuery] = useState('');
@@ -14,146 +15,31 @@ function Home() {
   const [currentIndexTodas, setCurrentIndexTodas] = useState(1);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [showBanner, setShowBanner] = useState(true);
+  const [estrenos, setEstrenos] = useState([]);
+  const [todasPeliculas, setTodasPeliculas] = useState([]);
   const carouselEstrenosRef = useRef(null);
   const carouselTodasRef = useRef(null);
 
-  const estrenos = [
-    { id: 1, title: "Misión: Imposible - La sentencia final", poster: "https://www.cuevana.is/_next/image?url=https%3A%2F%2Fimage.tmdb.org%2Ft%2Fp%2Foriginal%2FhaOjJGUV00dKlZaJWgjM1UD1cJV.jpg&w=256&q=75" },
-    { id: 2, title: "Karate Kid: Leyendas", poster: "https://www.cuevana.is/_next/image?url=https%3A%2F%2Fimage.tmdb.org%2Ft%2Fp%2Foriginal%2FefNhiZPk71FTYJ30dBkWMfc939D.jpg&w=640&q=75" },
-    { id: 3, title: "La formula del agua", poster: "https://www.cuevana.is/_next/image?url=https%3A%2F%2Fimage.tmdb.org%2Ft%2Fp%2Foriginal%2F2egvcQPqrXBgPHdK6hhznptaiiY.jpg&w=256&q=75" },
-    { id: 4, title: "El amateur: Operación venganza", poster: "https://www.cuevana.is/_next/image?url=https%3A%2F%2Fimage.tmdb.org%2Ft%2Fp%2Foriginal%2F1LKXRXycQAx7slS7AVNPUg2qvpY.jpg&w=640&q=75" },
-    { id: 5, title: "Lilo y Stitch", poster: "https://image.tmdb.org/t/p/w500/mKKqV23MQ0uakJS8OCE2TfV5jNS.jpg" },
-    { id: 6, title: "Una película de Minecraft", poster: "https://image.tmdb.org/t/p/w500/rZYYmjgyF5UP1AVsvhzzDOFLCwG.jpg" },
-    { id: 7, title: "Destino final: Lazos de sangre", poster: "https://image.tmdb.org/t/p/w500/frNkbclQpexf3aUzZrnixF3t5Hw.jpg" },
-    { id: 8, title: "Until Dawn", poster: "https://image.tmdb.org/t/p/w500/exgfubqSbF4veI4uXFOdbV66gEf.jpg" },
-    { id: 9, title: "A Working Man", poster: "https://image.tmdb.org/t/p/w500/8jrIVxlydAdFmHpBGmKpv2DPIWJ.jpg" },
-    { id: 10, title: "Sikandar", poster: "https://image.tmdb.org/t/p/w500/41s42CRXafa3OuRGvCtfYPEBmse.jpg" },
-    { id: 11, title: "Misión: Imposible - Sentencia final", poster: "https://image.tmdb.org/t/p/w500/haOjJGUV00dKlZaJWgjM1UD1cJV.jpg" },
-    { id: 12, title: "La fuente de la eterna juventud", poster: "https://image.tmdb.org/t/p/w500/9bhDUyOCrcwPLKbPyHM4uKOa65T.jpg" },
-    { id: 13, title: "La calle del terror: La reina del baile", poster: "https://image.tmdb.org/t/p/w500/kYeTcmPmuMvBgmwOdOtR5fUwRuH.jpg" },
-    { id: 14, title: "Warfare. Tiempo de guerra", poster: "https://image.tmdb.org/t/p/w500/fkVpNJugieKeTu7Se8uQRqRag2M.jpg" },
-    { id: 15, title: "The Legend of Ochi", poster: "https://image.tmdb.org/t/p/w500/cORMkM2j7JDXIYGLdz9EHUM84aD.jpg" },
-    { id: 16, title: "Blancanieves", poster: "https://image.tmdb.org/t/p/w500/sm91FNDF6OOKU4hT9BDW6EMoyDB.jpg" },
-    { id: 17, title: "Rosario", poster: "https://image.tmdb.org/t/p/w500/mYK7OYW4w2ZujE8B8GGnVYZWHYD.jpg" },
-    { id: 18, title: "Lilo & Stitch", poster: "https://image.tmdb.org/t/p/w500/9jrmKyhNGam2pj89bcxmhQzXCNo.jpg" },
-    { id: 19, title: "Capitán América: Brave New World", poster: "https://image.tmdb.org/t/p/w500/vUNj55xlF0pSU5FU3yDHC6L5wVX.jpg" },
-    { id: 20, title: "Tin Soldier", poster: "https://image.tmdb.org/t/p/w500/lFFDrFLXywFhy6khHes1LCFVMsL.jpg" },
-    { id: 21, title: "Los pecadores", poster: "https://image.tmdb.org/t/p/w500/zdClwqpYQXBSCGGDMdtvsuggwec.jpg" },
-    { id: 22, title: "The Great Escape", poster: "https://image.tmdb.org/t/p/w500/iTpgKfg70wbzA15xZF8k1lZhCgM.jpg" },
-    { id: 23, title: "Thunderbolts*", poster: "https://image.tmdb.org/t/p/w500/cGOBis1KNC8AkYMcOEw4lCycfD1.jpg" },
-    { id: 24, title: "Extraterritorial", poster: "https://image.tmdb.org/t/p/w500/bTYbNWz4kI1P3GzEVvWZwyZT7Uv.jpg" },
-  ];
+  // Fetch datos desde el backend (ya está correcto)
+  useEffect(() => {
+    const fetchMovies = async () => {
+      try {
+        const responseEstrenos = await fetch('http://localhost:5000/api/movies?releaseYear_gte=2024');
+        const dataEstrenos = await responseEstrenos.json();
+        setEstrenos(dataEstrenos);
 
-  const todasPeliculas = [
-    { id: 1, title: "Avengers", poster: "https://www18.pelisplushd.to/poster/the-avengers-los-vengadores-thumb.jpg" },
-    { id: 2, title: "La gran Aventura", poster: "https://www18.pelisplushd.to/poster/la-gran-aventura-lego-thumb.jpg" },
-    { id: 3, title: "Top Gun Maverick", poster: "https://www18.pelisplushd.to/poster/top-gun-maverick-thumb.jpg" },
-    { id: 4, title: "Sin Límites", poster: "https://www18.pelisplushd.to/poster/sin-limites-thumb.jpg" },
-    { id: 5, title: "La Llegada", poster: "https://www18.pelisplushd.to/poster/la-llegada-thumb.jpg" },
-    { id: 5, title: "Cadena perpetua", poster: "https://image.tmdb.org/t/p/w500/uRRTV7p6l2ivtODWJVVAMRrwTn2.jpg" },
-    { id: 6, title: "El padrino", poster: "https://image.tmdb.org/t/p/w500/5HlLUsmsv60cZVTzVns9ICZD6zU.jpg" },
-    { id: 7, title: "El Padrino Parte II", poster: "https://image.tmdb.org/t/p/w500/mbry0W5PRylSUHsYzdiY2FSJwze.jpg" },
-    { id: 8, title: "La lista de Schindler", poster: "https://image.tmdb.org/t/p/w500/3Ho0pXsnMxpGJWqdOi0KDNdaTkT.jpg" },
-    { id: 9, title: "12 hombres sin piedad", poster: "https://image.tmdb.org/t/p/w500/qyVoDb3EKO5SnhpSRpztNmZjo70.jpg" },
-    { id: 10, title: "El viaje de Chihiro", poster: "https://image.tmdb.org/t/p/w500/laXrmaTRuroArSPfsGlvTbeWxVA.jpg" },
-    { id: 11, title: "El caballero oscuro", poster: "https://image.tmdb.org/t/p/w500/8QDQExnfNFOtabLDKqfDQuHDsIg.jpg" },
-    { id: 12, title: "Un amor contra viento y marea", poster: "https://image.tmdb.org/t/p/w500/2CAL2433ZeIihfX1Hb2139CX0pW.jpg" },
-    { id: 13, title: "La milla verde", poster: "https://image.tmdb.org/t/p/w500/aBQiJRxGRrX0mXFMjxyzWYFtEnf.jpg" },
-    { id: 14, title: "Parásitos", poster: "https://image.tmdb.org/t/p/w500/4N55tgxDW0RRATyrZHbx0q9HUKv.jpg" },
-    { id: 15, title: "Pulp Fiction", poster: "https://image.tmdb.org/t/p/w500/hNcQAuquJxTxl2fJFs1R42DrWcf.jpg" },
-    { id: 16, title: "El señor de los anillos: El retorno del rey", poster: "https://image.tmdb.org/t/p/w500/mWuFbQrXyLk2kMBKF9TUPtDwuPx.jpg" },
-    { id: 17, title: "Your Name", poster: "https://image.tmdb.org/t/p/w500/iaiy3tg9QVkDpObm1IGqmbC9A5C.jpg" },
-    { id: 18, title: "Forrest Gump", poster: "https://image.tmdb.org/t/p/w500/oiqKEhEfxl9knzWXvWecJKN3aj6.jpg" },
-    { id: 19, title: "El bueno, el feo y el malo", poster: "https://image.tmdb.org/t/p/w500/rDD8KmcPLfHabdPMs7S7XjKL1mV.jpg" },
-    { id: 20, title: "Interstellar", poster: "https://image.tmdb.org/t/p/w500/fbUwSqYIP0isCiJXey3staY3DNn.jpg" },
-    { id: 21, title: "Uno de los nuestros", poster: "https://image.tmdb.org/t/p/w500/ii4bYbHN6HtVGK700AlphS56hD2.jpg" },
-    { id: 22, title: "Los siete samuráis", poster: "https://image.tmdb.org/t/p/w500/zr4DkzWIMjaWtj6hlsbN6dnNeTX.jpg" },
-    { id: 23, title: "La tumba de las luciérnagas", poster: "https://image.tmdb.org/t/p/w500/juKTAn2AuoE9MvCNvf3kwZrt1t4.jpg" },
-    { id: 24, title: "La vida es bella", poster: "https://image.tmdb.org/t/p/w500/aZ7MFlKPfB02Lr9NwZQ4vsYRgcy.jpg" },
-    { id: 25, title: "El Club de la Lucha", poster: "https://image.tmdb.org/t/p/w500/sgTAWJFaB2kBvdQxRGabYFiQqEK.jpg" },
-    { id: 26, title: "Cinema Paradiso", poster: "https://image.tmdb.org/t/p/w500/hHwsr3t5n7VVlide0A6cmb3UVU8.jpg" },
-    { id: 27, title: "Ciudad de Dios", poster: "https://image.tmdb.org/t/p/w500/2MztAexSdCVszezV0bKMKZPJAZf.jpg" },
-    { id: 28, title: "O Auto da Compadecida", poster: "https://image.tmdb.org/t/p/w500/xWCKF7hgOicb3A0XiY13SdlwRcn.jpg" },
-    { id: 29, title: "Psicosis", poster: "https://image.tmdb.org/t/p/w500/xFbnc2QPG5H5gYWsGbZT4q8Akya.jpg" },
-    { id: 30, title: "El señor de los anillos: La comunidad del anillo", poster: "https://image.tmdb.org/t/p/w500/9xtH1RmAzQ0rrMBNUMXstb2s3er.jpg" },
-    { id: 31, title: "Cosas imposibles", poster: "https://image.tmdb.org/t/p/w500/eaf7GQj0ieOwm08rrvjJQNbN0kN.jpg" },
-    { id: 32, title: "Harakiri", poster: "https://image.tmdb.org/t/p/w500/3uRTEObwdN7Q3u5xswL2Vf8EsOn.jpg" },
-    { id: 33, title: "Alguien voló sobre el nido del cuco", poster: "https://image.tmdb.org/t/p/w500/lBYmCynNEPt7HVaJvuXgfHvLhbJ.jpg" },
-    { id: 34, title: "Gabriel's Inferno", poster: "https://image.tmdb.org/t/p/w500/yXRoyYzIo17HfANn07oXYdyBy4h.jpg" },
-    { id: 35, title: "Érase una vez en América", poster: "https://image.tmdb.org/t/p/w500/u4VnqaxINtKVscmdldZsBojU6jm.jpg" },
-    { id: 36, title: "El señor de los anillos: Las dos torres", poster: "https://image.tmdb.org/t/p/w500/z632eZtXaw76ZE5mMMGOBXCpm1T.jpg" },
-    { id: 37, title: "Spider-Man: un nuevo universo", poster: "https://image.tmdb.org/t/p/w500/xRMZikjAHNFebD1FLRqgDZeGV4a.jpg" },
-    { id: 38, title: "El castillo ambulante", poster: "https://image.tmdb.org/t/p/w500/p8EARnEw8KPZzlZg3vkseYVMczu.jpg" },
-    { id: 39, title: "So Won", poster: "https://image.tmdb.org/t/p/w500/PZlNvDwKwHeHUsXnd6SEDXWZNn.jpg" },
-    { id: 40, title: "El imperio contraataca", poster: "https://image.tmdb.org/t/p/w500/eU7KcNAOeZj9PBIcGUMSsuJz8qj.jpg" },
-    { id: 41, title: "A Silent Voice", poster: "https://image.tmdb.org/t/p/w500/jAhaGJPreBrSWMN92MP2jjIDJKy.jpg" },
-    { id: 42, title: "Gabriel's Inferno: Part II", poster: "https://image.tmdb.org/t/p/w500/x5o8cLZfEXMoZczTYWLrUo1P7UJ.jpg" },
-    { id: 43, title: "El pianista", poster: "https://image.tmdb.org/t/p/w500/mxfLOWnHnSlbdraKfzRn5mqoqk7.jpg" },
-    { id: 44, title: "El infierno de Gabriel Parte 3", poster: "https://image.tmdb.org/t/p/w500/fYtHxTxlhzD4QWfEbrC1rypysSD.jpg" },
-    { id: 45, title: "Whiplash", poster: "https://image.tmdb.org/t/p/w500/sL32IZkyjlF7otj5vcUxiKSKzg5.jpg" },
-    { id: 46, title: "Seven: Los Siete Pecados Capitales", poster: "https://image.tmdb.org/t/p/w500/uVPcVz4b2hnSGrXYLdIGRXwcivs.jpg" },
-    { id: 47, title: "Primal: Tales of Savagery", poster: "https://image.tmdb.org/t/p/w500/9NBBkdxH0TjQEBSN2AzeE1sgsF9.jpg" },
-    { id: 48, title: "Origen", poster: "https://image.tmdb.org/t/p/w500/tXQvtRWfkUUnWJAn2tN3jERIUG.jpg" },
-    { id: 49, title: "La ventana indiscreta", poster: "https://image.tmdb.org/t/p/w500/fH1MipE8PXGg0rlI5cUdzxKnyA2.jpg" },
-    { id: 50, title: "Radical", poster: "https://image.tmdb.org/t/p/w500/eSatbygYZp8ooprBHZdb6GFZxGB.jpg" },
-    { id: 51, title: "El silencio de los corderos", poster: "https://image.tmdb.org/t/p/w500/8FdQQ3cUCs9goEOr1qUFaHackoJ.jpg" },
-    { id: 52, title: "Un ángel en nuestras vidas", poster: "https://image.tmdb.org/t/p/w500/yfnJ5qIYx7q33fY4jqv9Pu95RSg.jpg" },
-    { id: 53, title: "Spider-Man: Cruzando el Multiverso", poster: "https://image.tmdb.org/t/p/w500/37WcNMgNOMxdhT87MFl7tq7FM1.jpg" },
-    { id: 54, title: "El infierno del odio", poster: "https://image.tmdb.org/t/p/w500/pXXemxg8s7PHlide0A6cmb3UVU8.jpg" },
-    { id: 55, title: "Contraataque", poster: "https://image.tmdb.org/t/p/w500/kxnFdLJhi37ZVFDCL1ka0yeQVU5.jpg" },
-    { id: 56, title: "La leyenda de Hei", poster: "https://image.tmdb.org/t/p/w500/ogMVWcW6TSBl65heyUHnuYpTlBm.jpg" },
-    { id: 57, title: "En la misma clase", poster: "https://image.tmdb.org/t/p/w500/7byisQANRFHf9SC60n5PaLywuMa.jpg" },
-    { id: 58, title: "American History X", poster: "https://image.tmdb.org/t/p/w500/h2cDqHvnZkycBJKoF7WhcQ2MX1V.jpg" },
-    { id: 59, title: "La princesa Mononoke", poster: "https://image.tmdb.org/t/p/w500/7fUjg7jky5FnnNSiSbWyOlxVYGU.jpg" },
-    { id: 60, title: "Las Quintillizas: La Película", poster: "https://image.tmdb.org/t/p/w500/6QsExD8uP3vLk64yLnxD8MSS4A6.jpg" },
-    { id: 61, title: "Regreso al futuro", poster: "https://image.tmdb.org/t/p/w500/k3naCOK9ZQ5Mc7HhfHKN3zyray9.jpg" },
-    { id: 62, title: "Robot salvaje", poster: "https://image.tmdb.org/t/p/w500/a0a7RC01aTa7pOnskgJb3mCD2Ba.jpg" },
-    { id: 63, title: "Vivir", poster: "https://image.tmdb.org/t/p/w500/eDg67pLOtZAewt0hKIoinECpzCG.jpg" },
-    { id: 64, title: "Un día de verano", poster: "https://image.tmdb.org/t/p/w500/g5gMOcn0vFUITufKSxxL2WCyBIU.jpg" },
-    { id: 65, title: "Perfect Blue", poster: "https://image.tmdb.org/t/p/w500/kk8p22JheV6MB0fBXOOUgZK9UWQ.jpg" },
-    { id: 66, title: "El club de los poetas muertos", poster: "https://image.tmdb.org/t/p/w500/lzvt7u7A6oxePzczURHQXEUTXNS.jpg" },
-    { id: 67, title: "El profesional (Léon)", poster: "https://image.tmdb.org/t/p/w500/eWf4KEaCpiWcDOBkTiNQ0328k3H.jpg" },
-    { id: 68, title: "Josee, el tigre y los peces", poster: "https://image.tmdb.org/t/p/w500/buF1mmMRAiJZMOK5Qg3DBTtZ5XO.jpg" },
-    { id: 69, title: "El gran dictador", poster: "https://image.tmdb.org/t/p/w500/w7ovs2B2AlNRig68HOmuYVQRroQ.jpg" },
-    { id: 70, title: "Dedicada A Mi Ex", poster: "https://image.tmdb.org/t/p/w500/xc4bTXVwYNXi10jG9dwcaYt5IpU.jpg" },
-    { id: 71, title: "El crepúsculo de los dioses", poster: "https://image.tmdb.org/t/p/w500/sVILYytrnjsEXBcZyxHMJ5jP74t.jpg" },
-    { id: 72, title: "Érase una vez un estudio", poster: "https://image.tmdb.org/t/p/w500/81BdCKeRtyHr0muZY72zYr0JM3j.jpg" },
-    { id: 73, title: "The End of Evangelion", poster: "https://image.tmdb.org/t/p/w500/9jbxvKB937BWeYAmMKZTqPxBLsk.jpg" },
-    { id: 74, title: "Hasta que llegó su hora", poster: "https://image.tmdb.org/t/p/w500/upiek8u4rHTrOJW9B0woXe4A4h7.jpg" },
-    { id: 75, title: "En el bosque de la luz de las luciérnagas", poster: "https://image.tmdb.org/t/p/w500/xE763r1dnYji0gOxrSxBtzyouSf.jpg" },
-    { id: 76, title: "Una mujer y tres hombres", poster: "https://image.tmdb.org/t/p/w500/jsjfvG1971tCUPtvj1dNSPWNzST.jpg" },
-    { id: 77, title: "Tiempos modernos", poster: "https://image.tmdb.org/t/p/w500/f3uOJseH4oPEo0Sq7WyQ6IwMG4l.jpg" },
-    { id: 78, title: "¡Qué bello es vivir!", poster: "https://image.tmdb.org/t/p/w500/63W4MsB8e5whhPNyxhRVTzSsCje.jpg" },
-    { id: 79, title: "Given: The Movie", poster: "https://image.tmdb.org/t/p/w500/fsEq2LddodaHvhs4mTZAaqOV6sR.jpg" },
-    { id: 80, title: "Violet Evergarden: La película", poster: "https://image.tmdb.org/t/p/w500/5E1JUJAWzd8ylHIhTLsowW2RCBE.jpg" },
-    { id: 81, title: "Intocable", poster: "https://image.tmdb.org/t/p/w500/edPWyHqknFuxFY3sdmC3LtJITWC.jpg" },
-    { id: 82, title: "Apocalypse Now", poster: "https://image.tmdb.org/t/p/w500/6H4KLXvam8f5tihmU80yRSfj5Fl.jpg" },
-    { id: 83, title: "Luces de la ciudad", poster: "https://image.tmdb.org/t/p/w500/15bnFY02iqWB6jN0sjxsxMNrmWS.jpg" },
-    { id: 84, title: "El rey león", poster: "https://image.tmdb.org/t/p/w500/b0MxU37dNmMwKtoPVYPKOZSIrIn.jpg" },
-    { id: 85, title: "Milagro en la celda 7", poster: "https://image.tmdb.org/t/p/w500/scxBIHaT1ZiPDPJu3vKd9Yn5gBA.jpg" },
-    { id: 86, title: "Senderos de gloria", poster: "https://image.tmdb.org/t/p/w500/vz8J8nTbF5JP7PQK4VNVsO8rzCy.jpg" },
-    { id: 87, title: "La leyenda del pianista en el océano", poster: "https://image.tmdb.org/t/p/w500/td38NLfhvwotZhKKHGXd71BKiox.jpg" },
-    { id: 88, title: "Old Boy", poster: "https://image.tmdb.org/t/p/w500/45kRW1xgTq3QrZltL9mY9e9iYkH.jpg" },
-    { id: 89, title: "Clouds", poster: "https://image.tmdb.org/t/p/w500/d0OdD1I8qAfETvE9Rp9Voq7R8LR.jpg" },
-    { id: 90, title: "La evasión", poster: "https://image.tmdb.org/t/p/w500/Al1F9o6fDkOBRngeG2FTJ0f9xTv.jpg" },
-    { id: 91, title: "Seishun Buta Yarou wa Yumemiru Shoujo no Yume wo Minai", poster: "https://image.tmdb.org/t/p/w500/2Tpyv4cwwyE2xV9bqx7DOWnUCZ5.jpg" },
-    { id: 92, title: "Como caído del cielo", poster: "https://image.tmdb.org/t/p/w500/xg6QZdlHrq2dtSK8cfnQQMnmpeY.jpg" },
-    { id: 93, title: "Taylor Swift: Gira de estadios Reputation", poster: "https://image.tmdb.org/t/p/w500/u6oXUTtOuJRPdUgUuPAVVJPSKCo.jpg" },
-    { id: 94, title: "Vengadores: Endgame", poster: "https://image.tmdb.org/t/p/w500/br6krBFpaYmCSglLBWRuhui7tPc.jpg" },
-    { id: 95, title: "Klaus", poster: "https://image.tmdb.org/t/p/w500/aLniylyJlbXEdxvaGSuQkRACWUx.jpg" },
-    { id: 96, title: "Quiero comerme tu páncreas", poster: "https://image.tmdb.org/t/p/w500/1rgR2oMVFuk4ltx6tYXYskPaA6Y.jpg" },
-    { id: 97, title: "Toda una vida en un año", poster: "https://image.tmdb.org/t/p/w500/xGDbQI7Gtgurt9W5ez6Tim2lpS2.jpg" },
-    { id: 98, title: "A dos metros de ti", poster: "https://image.tmdb.org/t/p/w500/4F5LggLzv2VIa0MJT2ETN8bWtr2.jpg" },
-    { id: 99, title: "Vengadores: Infinity War", poster: "https://image.tmdb.org/t/p/w500/ksBQ4oHQDdJwND8H90ay8CbMihU.jpg" },
-    { id: 100, title: "Ven y mira", poster: "https://image.tmdb.org/t/p/w500/3trCyueh2CBTlRrpq7xElqSWHTh.jpg" },
-    { id: 101, title: "Green Book", poster: "https://image.tmdb.org/t/p/w500/od2A7qPtpimcYfqfKXkpHqoKyuS.jpg" },
-    { id: 102, title: "Mommy", poster: "https://image.tmdb.org/t/p/w500/1mjhmc2iG8Oe5WTqevECTUQ5iWP.jpg" },
-    { id: 103, title: "Matrix", poster: "https://image.tmdb.org/t/p/w500/tpW2X2DvxtTHJ61iJ7zNYYrJihs.jpg" },
-    { id: 104, title: "Evangelion: 3.0+1.01 Thrice Upon a Time", poster: "https://image.tmdb.org/t/p/w500/2QiEVEePwGGwzCWaxrVR5B4LLnu.jpg" },
-  ];
+        const responseTodas = await fetch('http://localhost:5000/api/movies?limit=10');
+        const dataTodas = await responseTodas.json();
+        setTodasPeliculas(dataTodas);
+      } catch (error) {
+        console.error('Error fetching movies:', error);
+      }
+    };
+    fetchMovies();
+  }, []);
 
-  const extendedEstrenos = [...estrenos.slice(-1), ...estrenos, ...estrenos.slice(0, 1)];
-  const extendedTodas = [...todasPeliculas.slice(-1), ...todasPeliculas, ...todasPeliculas.slice(0, 1)];
+  const extendedEstrenos = [...(estrenos.slice(-1) || []), ...estrenos, ...(estrenos.slice(0, 1) || [])];
+  const extendedTodas = [...(todasPeliculas.slice(-1) || []), ...todasPeliculas, ...(todasPeliculas.slice(0, 1) || [])];
 
   const handleAvatarClick = () => setShowDialog(true);
   const handleCloseDialog = () => setShowDialog(false);
@@ -170,36 +56,36 @@ function Home() {
   }, []);
 
   const handlePrevEstrenos = () => {
-    if (isTransitioning) return;
+    if (isTransitioning || estrenos.length === 0) return;
     setIsTransitioning(true);
     setCurrentIndexEstrenos((prev) => prev - 1);
   };
 
   const handleNextEstrenos = () => {
-    if (isTransitioning) return;
+    if (isTransitioning || estrenos.length === 0) return;
     setIsTransitioning(true);
     setCurrentIndexEstrenos((prev) => prev + 1);
   };
 
   const handlePrevTodas = () => {
-    if (isTransitioning) return;
+    if (isTransitioning || todasPeliculas.length === 0) return;
     setIsTransitioning(true);
     setCurrentIndexTodas((prev) => prev - 1);
   };
 
   const handleNextTodas = () => {
-    if (isTransitioning) return;
+    if (isTransitioning || todasPeliculas.length === 0) return;
     setIsTransitioning(true);
     setCurrentIndexTodas((prev) => prev + 1);
   };
 
   const handleTransitionEndEstrenos = () => {
     setIsTransitioning(false);
-    if (currentIndexEstrenos === 0) {
+    if (currentIndexEstrenos === 0 && estrenos.length > 0) {
       setCurrentIndexEstrenos(estrenos.length);
       carouselEstrenosRef.current.style.transition = 'none';
       carouselEstrenosRef.current.style.transform = `translateX(-${estrenos.length * (100 / 4)}%)`;
-    } else if (currentIndexEstrenos === extendedEstrenos.length - 1) {
+    } else if (currentIndexEstrenos === extendedEstrenos.length - 1 && estrenos.length > 0) {
       setCurrentIndexEstrenos(1);
       carouselEstrenosRef.current.style.transition = 'none';
       carouselEstrenosRef.current.style.transform = `translateX(-${(100 / 4)}%)`;
@@ -208,11 +94,11 @@ function Home() {
 
   const handleTransitionEndTodas = () => {
     setIsTransitioning(false);
-    if (currentIndexTodas === 0) {
+    if (currentIndexTodas === 0 && todasPeliculas.length > 0) {
       setCurrentIndexTodas(todasPeliculas.length);
       carouselTodasRef.current.style.transition = 'none';
       carouselTodasRef.current.style.transform = `translateX(-${todasPeliculas.length * (100 / 4)}%)`;
-    } else if (currentIndexTodas === extendedTodas.length - 1) {
+    } else if (currentIndexTodas === extendedTodas.length - 1 && todasPeliculas.length > 0) {
       setCurrentIndexTodas(1);
       carouselTodasRef.current.style.transition = 'none';
       carouselTodasRef.current.style.transform = `translateX(-${(100 / 4)}%)`;
@@ -220,12 +106,15 @@ function Home() {
   };
 
   useEffect(() => {
-    carouselEstrenosRef.current.style.transition = 'transform 0.5s cubic-bezier(0.4,0,0.2,1)';
-    carouselTodasRef.current.style.transition = 'transform 0.5s cubic-bezier(0.4,0,0.2,1)';
-  }, []);
+    if (carouselEstrenosRef.current) {
+      carouselEstrenosRef.current.style.transition = 'transform 0.5s cubic-bezier(0.4,0,0.2,1)';
+    }
+    if (carouselTodasRef.current) {
+      carouselTodasRef.current.style.transition = 'transform 0.5s cubic-bezier(0.4,0,0.2,1)';
+    }
+  }, [estrenos, todasPeliculas]);
 
   const debouncedSearch = debounce((value) => {
-    // Implement search logic here (e.g., filter movies)
     console.log('Searching for:', value);
   }, 300);
 
@@ -323,7 +212,7 @@ function Home() {
             >
               ✕
             </button>
-            <h3 className="text-lg font-heading font-bold   text-gray-100 mb-4">¡Únete al mundo del cine mágico!</h3>
+            <h3 className="text-lg font-heading font-bold text-gray-100 mb-4">¡Únete al mundo del cine mágico!</h3>
             <p className="text-gray-100 font-body mb-4">
               {isLoggedIn ? "¡Estás listo para vivir aventuras épicas en la gran pantalla!" : "¡Embárcate en una aventura! Inicia sesión o regístrate para desbloquear contenido exclusivo."}
             </p>
@@ -334,6 +223,16 @@ function Home() {
                   className="bg-indigo-600 text-gray-100 px-4 py-2 rounded-full hover:bg-indigo-500 transition-all shadow-md hover:shadow-indigo-600/50 hover-sparkle relative"
                 >
                   Iniciar sesión o registrarse
+                </button>
+              </div>
+            )}
+            {isLoggedIn && (
+              <div className="flex justify-center">
+                <button
+                  onClick={logout}
+                  className="bg-red-600 text-gray-100 px-4 py-2 rounded-full hover:bg-red-500 transition-all shadow-md hover:shadow-red-600/50 hover-sparkle relative"
+                >
+                  Cerrar sesión
                 </button>
               </div>
             )}
@@ -383,11 +282,10 @@ function Home() {
                         <div className="relative group">
                           <div className="aspect-[2/3] overflow-hidden rounded-lg">
                             <img
-                              src={movie.poster}
+                              src={movie.poster || 'https://via.placeholder.com/150x225?text=Poster+Not+Found'}
                               alt={movie.title}
                               className="w-full h-full object-cover rounded-lg shadow-md transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg"
                               loading="lazy"
-                              onError={(e) => (e.target.src = 'https://via.placeholder.com/150x225?text=Poster+Not+Found')}
                             />
                           </div>
                           <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-2">
@@ -440,11 +338,10 @@ function Home() {
                         <div className="relative group">
                           <div className="aspect-[2/3] overflow-hidden rounded-lg">
                             <img
-                              src={movie.poster}
+                              src={movie.poster || 'https://via.placeholder.com/150x225?text=Poster+Not+Found'}
                               alt={movie.title}
                               className="w-full h-full object-cover rounded-lg shadow-md transition-all duration-300 group-hover:scale-105 group-hover:shadow-lg"
                               loading="lazy"
-                              onError={(e) => (e.target.src = 'https://via.placeholder.com/150x225?text=Poster+Not+Found')}
                             />
                           </div>
                           <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-2">
@@ -470,8 +367,8 @@ function Home() {
         </section>
       </main>
 
-{/* Footer */}
-<Footer />
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

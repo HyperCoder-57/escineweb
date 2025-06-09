@@ -18,17 +18,17 @@ function ReservationSummary() {
     rating: 4,
     director: "Neil Burger",
     synopsis:
-      "Sin Límites (2011) es un thriller de ciencia ficción donde un escritor fracasado descubre una misteriosa droga que le permite usar el 100% de su capacidad cerebral. Con habilidades mentales sobrehumanas, comienza a escalar en el mundo financiero, pero pronto se ve atrapado en una red peligrosa de poder, ambición y consecuencias mortales. Una adictiva mezcla de suspenso, inteligencia y adrenalina.",
+      "Sin Límites (2011) es un thriller de ciencia ficción donde un escritor fracasado descubre una misteriosa droga que le permite usar el 100% de su capacidad cerebral. Con habilidades mentales sobrehumanas, comienza a escalar en el mundo financiero, pero pronto se ve atrapado en una red peligrosa de poder, pmbición y consecuencias mortales. Una adictiva mezcla de suspenso, inteligencia y adrenalina.",
   };
 
   const schedules = {
-    Lunes: ["10:00 am", "1:00 pm", "4:00 pm", "7:00 pm"],
-    Martes: ["10:00 am", "1:00 pm", "4:00 pm", "7:00 pm"],
-    Miércoles: ["12:00 pm", "3:00 pm", "6:00 pm", "9:00 pm"],
-    Jueves: ["12:00 pm", "3:00 pm", "6:00 pm", "9:00 pm"],
-    Viernes: ["10:00 am", "1:00 pm", "4:00 pm", "7:00 pm"],
-    Sábado: ["10:00 am", "1:00 pm", "4:00 pm", "7:00 pm"],
-    Domingo: ["12:00 pm", "3:00 pm", "6:00 pm", "9:00 pm"],
+    Lunes: ["10:00 pm", "1:00 pm"],
+    Martes: ["10:00 pm",],
+    Miércoles: ["12:00 pm",  "6:00 pm", "9:00 pm"],
+    Jueves: ["12:00 pm", "3:00 pm"],
+    Viernes: ["10:00 pm", "1:00 pm"],
+    Sábado: [  "7:00 pm"],
+    Domingo: [ "6:00 pm", "9:00 pm"],
   };
 
   // Generar estrellas para la valoración

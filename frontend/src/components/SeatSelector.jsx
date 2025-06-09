@@ -1,7 +1,7 @@
-// frontend/src/pages/SeatSelector.jsx
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import logo from '../assets/logo.png';
 import { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
 import Footer from '../components/Footer';
 
 function SeatSelector() {
@@ -10,79 +10,44 @@ function SeatSelector() {
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [reservedSeats, setReservedSeats] = useState([]);
   const [globalReservedSeats, setGlobalReservedSeats] = useState({});
-  const [selectedBranch, setSelectedBranch] = useState('Cinepolis Perisur'); // Valor predeterminado
-  const [selectedDate, setSelectedDate] = useState('2025-05-30'); // Valor predeterminado
-  const [selectedTime, setSelectedTime] = useState('2:00 pm'); // Valor predeterminado
+  const [selectedBranch, setSelectedBranch] = useState(''); // Sin valor predeterminado, lo obtendremos del backend
+  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedTime, setSelectedTime] = useState('');
   const [timeLeft, setTimeLeft] = useState(300);
   const [notification, setNotification] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [seats, setSeats] = useState([]);
   const [hasScrolled, setHasScrolled] = useState(false);
   const [highlightConfirmButton, setHighlightConfirmButton] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(true); // Forzar autenticación para pruebas
+  const [isAuthenticated, setIsAuthenticated] = useState(false); // Sin forzar autenticación
   const confirmButtonRef = useRef(null);
   const [selectedCount, setSelectedCount] = useState(0);
-
-  const movie = { title: "The Passion", id: parseInt(id) || 1 };
-
-  const branchesData = [
-    {
-      name: "Cinepolis Perisur",
-      dates: [
-        { date: "2025-05-30", times: ["2:00 pm", "4:00 pm", "7:00 pm"], seats: generateSeats(10, 15, 0.3, 0.1) },
-        { date: "2025-05-31", times: ["10:00 am", "1:00 pm", "4:00 pm", "7:00 pm"], seats: generateSeats(10, 15, 0.25, 0.15) },
-        { date: "2025-06-01", times: ["12:00 pm", "3:00 pm", "6:00 pm", "9:00 pm"], seats: generateSeats(10, 15, 0.2, 0.05) },
-      ],
-    },
-    {
-      name: "Cinepolis Satélite",
-      dates: [
-        { date: "2025-05-30", times: ["2:00 pm", "4:00 pm"], seats: generateSeats(10, 15, 0.2, 0.1) },
-        { date: "2025-05-31", times: ["12:00 pm", "3:00 pm", "6:00 pm"], seats: generateSeats(10, 15, 0.15, 0.05) },
-        { date: "2025-06-01", times: ["10:00 am", "1:00 pm", "4:00 pm"], seats: generateSeats(10, 15, 0.1, 0.1) },
-      ],
-    },
-    {
-      name: "Cinepolis Universidad",
-      dates: [
-        { date: "2025-05-30", times: ["2:00 pm", "4:00 pm", "7:00 pm"], seats: generateSeats(10, 15, 0.4, 0.1) },
-        { date: "2025-05-31", times: ["10:00 am", "1:00 pm", "4:00 pm"], seats: generateSeats(10, 15, 0.35, 0.15) },
-        { date: "2025-06-01", times: ["12:00 pm", "3:00 pm", "6:00 pm"], seats: generateSeats(10, 15, 0.3, 0.05) },
-      ],
-    },
-  ];
-
-  function generateSeats(rows, cols, occupiedPercentage, reservedPercentage) {
-    const seats = [];
-    for (let i = 0; i < rows; i++) {
-      const row = [];
-      for (let j = 0; j < cols; j++) {
-        const isOccupied = Math.random() < occupiedPercentage;
-        const isReserved = !isOccupied && Math.random() < reservedPercentage;
-        row.push({
-          id: `${i}-${j}`,
-          status: isOccupied ? 'occupied' : isReserved ? 'reserved' : 'available',
-        });
-      }
-      seats.push(row);
-    }
-    return seats;
-  }
-
-  const currentBranch = branchesData.find((b) => b.name === selectedBranch) || branchesData[0];
-  const availableDates = currentBranch ? currentBranch.dates : [];
-  const currentDateData = availableDates.find((d) => d.date === selectedDate) || (availableDates[0] || {});
-  const availableTimes = currentDateData.times || [];
+  const [movie, setMovie] = useState(null);
 
   useEffect(() => {
-    // Simulación de autenticación (forzar true para pruebas)
-    // const auth = localStorage.getItem('authToken');
-    // setIsAuthenticated(!!auth);
-    setIsAuthenticated(true); // Temporal para pruebas
+    const fetchMovie = async () => {
+      try {
+        const response = await axios.get(`http://localhost:5000/api/movies/${id}`);
+        setMovie(response.data);
+        // Simulación de sucursales (ajustar con backend real)
+        setSelectedBranch('Cinepolis Perisur'); // Valor temporal
+        setSelectedDate(response.data.Showtimes[0]?.date || '');
+        setSelectedTime(response.data.Showtimes[0]?.time || '');
+      } catch (error) {
+        console.error('Error al obtener película:', error);
+        setNotification('Error al cargar los detalles de la película.');
+      }
+    };
+    fetchMovie();
+  }, [id]);
+
+  useEffect(() => {
+    const auth = localStorage.getItem('authToken'); // Usar autenticación real
+    setIsAuthenticated(!!auth);
   }, []);
 
   useEffect(() => {
-    if (!selectedBranch || !selectedDate || !selectedTime) {
+    if (!selectedBranch || !selectedDate || !selectedTime || !movie?.Showtimes) {
       setSeats([]);
       setGlobalReservedSeats((prev) => {
         const key = `${selectedBranch}-${selectedDate}-${selectedTime}`;
@@ -92,9 +57,22 @@ function SeatSelector() {
       return;
     }
 
-    const branch = branchesData.find((b) => b.name === selectedBranch);
-    const date = branch?.dates.find((d) => d.date === selectedDate);
-    const originalSeats = date?.seats || generateSeats(10, 15, 0.3, 0.1);
+    const showtime = movie.Showtimes.find(
+      (s) => s.date === selectedDate && s.time === selectedTime
+    );
+    if (!showtime) return;
+
+    // Simulación de asientos (reemplazar con datos del backend)
+    const originalSeats = Array(10)
+      .fill()
+      .map((_, i) =>
+        Array(15)
+          .fill()
+          .map((_, j) => ({
+            id: `${i}-${j}`,
+            status: Math.random() < 0.3 ? 'occupied' : 'available',
+          }))
+      );
 
     const key = `${selectedBranch}-${selectedDate}-${selectedTime}`;
     const reservedForOthers = globalReservedSeats[key] || [];
@@ -109,7 +87,7 @@ function SeatSelector() {
     );
 
     setSeats(updatedSeats);
-  }, [selectedBranch, selectedDate, selectedTime]);
+  }, [selectedBranch, selectedDate, selectedTime, movie]);
 
   const handleSeatClick = (rowIndex, colIndex) => {
     if (timeLeft <= 0) return;
@@ -126,7 +104,7 @@ function SeatSelector() {
         const newSeats = prev.includes(seatId)
           ? prev.filter((id) => id !== seatId)
           : [...prev, seatId];
-        setSelectedCount(newSeats.length); // Sincronizar selectedCount
+        setSelectedCount(newSeats.length);
         return newSeats;
       });
     } else if (seat.status === 'reserved') {
@@ -147,9 +125,7 @@ function SeatSelector() {
       setSelectedCount(0);
       return;
     }
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => prev - 1);
-    }, 1000);
+    const timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
     return () => clearInterval(timer);
   }, [timeLeft, selectedBranch, selectedDate, selectedTime]);
 
@@ -206,19 +182,6 @@ function SeatSelector() {
     }
   }, [selectedCount, hasScrolled]);
 
-  // Log para depuración (eliminar en producción)
-  useEffect(() => {
-    console.log({
-      selectedBranch,
-      selectedDate,
-      selectedTime,
-      selectedCount,
-      timeLeft,
-      isAuthenticated,
-      isButtonDisabled: !selectedBranch || !selectedDate || !selectedTime || selectedCount === 0 || timeLeft <= 0 || !isAuthenticated,
-    });
-  }, [selectedBranch, selectedDate, selectedTime, selectedCount, timeLeft, isAuthenticated]);
-
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -236,13 +199,10 @@ function SeatSelector() {
     }
   };
 
-  const debouncedSearch = (query) => {
-    console.log(`Buscando: ${query}`);
-  };
-
   const handleSearchChange = (value) => {
     setSearchQuery(value);
-    debouncedSearch(value);
+    // Simulación de búsqueda (ajustar con backend)
+    console.log(`Buscando: ${value}`);
   };
 
   const dismissNotification = () => setNotification('');
@@ -255,6 +215,38 @@ function SeatSelector() {
     minute: '2-digit',
     hour12: true,
   });
+
+  const handleReserve = async () => {
+    if (isButtonDisabled) {
+      setNotification('Por favor, completa todas las selecciones y elige al menos un asiento.');
+      return;
+    }
+    try {
+      const showtime = movie.Showtimes.find(
+        (s) => s.date === selectedDate && s.time === selectedTime
+      );
+      if (!showtime) throw new Error('Horario no encontrado');
+
+      const reservationData = {
+        showtimeId: showtime.id,
+        seatNumbers: selectedSeats.map((seatId) => parseInt(seatId.split('-').join(''))), // Ajustar formato
+      };
+      await axios.post('http://localhost:5000/api/reservations', reservationData);
+      setNotification('¡Reserva confirmada con éxito! Te hemos regalado palomitas gratis.');
+      setSelectedSeats([]);
+      setReservedSeats([]);
+      setHasScrolled(false);
+      setGlobalReservedSeats((prev) => {
+        const key = `${selectedBranch}-${selectedDate}-${selectedTime}`;
+        return { ...prev, [key]: [] };
+      });
+      setSelectedCount(0);
+      setTimeout(() => navigate('/profile'), 2000);
+    } catch (error) {
+      console.error('Error al reservar:', error);
+      setNotification('Error al procesar la reserva. Intenta de nuevo.');
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 animate-bg text-gray-100 relative overflow-hidden">
@@ -313,7 +305,7 @@ function SeatSelector() {
       {/* Banner */}
       <div className="bg-gradient-to-r from-indigo-800 to-purple-800 p-3 text-center text-gray-100 mb-2 shadow-md animate-pulse-slow relative z-10" aria-live="polite">
         <p className="text-base font-body font-semibold">
-          ¡Últimos asientos para {movie.title} hoy, {currentDateTime}! <strong>Reserva ahora.</strong>
+          ¡Últimos asientos para {movie?.title || 'la película'} hoy, {currentDateTime}! <strong>Reserva ahora.</strong>
         </p>
       </div>
 
@@ -343,9 +335,9 @@ function SeatSelector() {
                 aria-describedby="branch-description"
               >
                 <option value="">Elige una sucursal</option>
-                {branchesData.map((branch) => (
-                  <option key={branch.name} value={branch.name}>{branch.name}</option>
-                ))}
+                <option value="Cinepolis Perisur">Cinepolis Perisur</option>
+                <option value="Cinepolis Satélite">Cinepolis Satélite</option>
+                <option value="Cinepolis Universidad">Cinepolis Universidad</option>
               </select>
               <span id="branch-description" className="sr-only">Selecciona la sucursal donde deseas ver la película</span>
             </div>
@@ -369,9 +361,9 @@ function SeatSelector() {
                 aria-describedby="date-description"
               >
                 <option value="">Elige una fecha</option>
-                {availableDates.map((date) => (
-                  <option key={date.date} value={date.date}>
-                    {new Date(date.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}
+                {movie?.Showtimes?.map((showtime) => (
+                  <option key={showtime.id} value={showtime.date}>
+                    {new Date(showtime.date).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </option>
                 ))}
               </select>
@@ -391,14 +383,18 @@ function SeatSelector() {
                   setSelectedCount(0);
                   setNotification('¡Listo! Ahora elige tus asientos.');
                 }}
-                disabled={!selectedDate || availableTimes.length === 0}
+                disabled={!selectedDate || !movie?.Showtimes}
                 aria-required="true"
                 aria-describedby="time-description"
               >
                 <option value="">Elige una hora</option>
-                {availableTimes.map((time) => (
-                  <option key={time} value={time}>{time}</option>
-                ))}
+                {movie?.Showtimes
+                  ?.filter((showtime) => showtime.date === selectedDate)
+                  ?.map((showtime) => (
+                    <option key={showtime.id} value={showtime.time}>
+                      {showtime.time}
+                    </option>
+                  ))}
               </select>
               <span id="time-description" className="sr-only">Selecciona la hora de la función</span>
             </div>
@@ -481,24 +477,7 @@ function SeatSelector() {
               ${isButtonDisabled ? 'opacity-50 cursor-not-allowed' : ''}
               ${highlightConfirmButton ? 'shadow-[0_0_15px_rgba(245,158,11,0.9)] animate-pulse-slow' : ''}`}
             disabled={isButtonDisabled}
-            onClick={() => {
-              if (isButtonDisabled) {
-                setNotification('Por favor, completa todas las selecciones y elige al menos un asiento.');
-              } else {
-                setNotification('¡Reserva confirmada con éxito! Te hemos regalado palomitas gratis.');
-                setSelectedSeats([]);
-                setReservedSeats([]);
-                setHasScrolled(false);
-                setGlobalReservedSeats((prev) => {
-                  const key = `${selectedBranch}-${selectedDate}-${selectedTime}`;
-                  return { ...prev, [key]: [] };
-                });
-                setSelectedCount(0);
-                setTimeout(() => {
-                  navigate('/profile');
-                }, 2000);
-              }
-            }}
+            onClick={handleReserve}
             aria-disabled={isButtonDisabled}
             aria-label="Confirmar reserva de asientos"
           >
@@ -522,8 +501,7 @@ function SeatSelector() {
         </div>
       )}
 
-{/* Footer */}
-<Footer />
+      <Footer />
     </div>
   );
 }
