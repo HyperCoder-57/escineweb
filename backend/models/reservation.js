@@ -31,12 +31,16 @@ module.exports = (sequelize) => {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
     },
+  }, {
+    tableName: 'Reservations',
+    timestamps: true,
   });
 
   Reservation.associate = (models) => {
-    Reservation.belongsTo(models.Movie, { foreignKey: 'movieId' });
-    Reservation.belongsTo(models.User, { foreignKey: 'userId' });
-    Reservation.belongsTo(models.Seat, { foreignKey: 'seatId' });
+    Reservation.belongsTo(models.Movie, { foreignKey: 'movieId', as: 'movie' });
+    Reservation.belongsTo(models.User, { foreignKey: 'userId', as: 'user' });
+    Reservation.belongsTo(models.Seat, { foreignKey: 'seatId', as: 'seat' });
+    Reservation.belongsTo(models.Showtime, { foreignKey: 'showtimeId', as: 'showtime' });
   };
 
   return Reservation;

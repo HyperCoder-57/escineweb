@@ -2,9 +2,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import logo from '../assets/logo.png';
 import Footer from '../components/Footer';
-
+import { useAuth } from '../context/AuthContext';
+ 
 function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [mode, setMode] = useState('login');
   const [formData, setFormData] = useState({
     name: '',
@@ -33,9 +35,8 @@ function Login() {
   };
 
   const validatePassword = (password) => {
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     if (!password) return 'La contraseña es obligatoria';
-    if (!passwordRegex.test(password)) return 'La contraseña debe tener al menos 8 caracteres, 1 mayúscula, 1 minúscula, 1 número y 1 carácter especial (@$!%*?&)';
+    if (password.length < 6) return 'La contraseña debe tener al menos 6 caracteres';
     return '';
   };
 
@@ -62,30 +63,61 @@ function Login() {
     return nameValid && emailValid && passwordValid;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
-    const nameError = mode === 'signup' ? validateName(formData.name) : '';
+    const isRegister = mode === 'signup';
+  
+    const nameError = isRegister ? validateName(formData.name) : '';
     const emailError = validateEmail(formData.email);
     const passwordError = validatePassword(formData.password);
-
+  
     setErrors({
       name: nameError,
       email: emailError,
       password: passwordError,
     });
-
+  
     if (nameError || emailError || passwordError) return;
-
-    if (mode === 'login') {
-      setNotification(`¡Bienvenido de nuevo, ${formData.email}! Disfruta de tu experiencia en EsCine.`);
-      setTimeout(() => navigate('/'), 2000);
-    } else {
-      setNotification(`¡Bienvenido, ${formData.name}! Te hemos regalado un boleto gratis para hoy.`);
-      setTimeout(() => navigate('/'), 2000);
+  
+    try {
+      const url = isRegister ? '/api/users/register' : '/api/users/login';
+      const body = isRegister
+        ? { name: formData.name, email: formData.email, password: formData.password }
+        : { email: formData.email, password: formData.password };
+      const response = await fetch(`http://localhost:5000${url}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(body),
+      });
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error en la solicitud');
+      }
+  
+      const data = await response.json();
+      if (isRegister) {
+        setNotification(data.message);
+        setTimeout(() => {
+          navigate('/verify');
+          setFormData({ name: '', email: '', password: '' });
+          setErrors({ name: '', email: '', password: '' });
+        }, 2000);
+      } else {
+        login(data.user, data.token); // Extrae user y token por separado
+        setNotification(`¡Bienvenido de nuevo, ${formData.email}! Disfruta de tu experiencia en EsCine.`);
+        setTimeout(() => {
+          navigate('/');
+          setFormData({ name: '', email: '', password: '' });
+          setErrors({ name: '', email: '', password: '' });
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Error en la solicitud:', error);
+      setNotification(error.message);
+      setTimeout(() => setNotification(''), 3000);
     }
-    setFormData({ name: '', email: '', password: '' });
-    setErrors({ name: '', email: '', password: '' });
   };
 
   const dismissNotification = () => setNotification('');
@@ -101,7 +133,6 @@ function Login() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 animate-bg text-gray-100 relative overflow-hidden">
-      {/* Partículas */}
       <div className="absolute inset-0 opacity-20">
         {[...Array(50)].map((_, i) => (
           <span
@@ -116,7 +147,6 @@ function Login() {
         ))}
       </div>
 
-      {/* Header */}
       <header className="bg-gray-900 bg-opacity-90 text-gray-100 p-4 shadow-lg z-10">
         <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <Link to="/" className="flex-shrink-0">
@@ -130,21 +160,18 @@ function Login() {
         </div>
       </header>
 
-      {/* Banner */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-3 text-center text-gray-100 mb-2 shadow-md animate-glow relative z-10" aria-live="polite">
-        <p className="text-base font-body font-semibold">
+        <p className="text Salmon font-body font-semibold">
           ¡Únete hoy, {currentDateTime}, a millones de cinéfilos! <strong>Regístrate ahora y obtén un boleto gratis.</strong>
         </p>
       </div>
 
-      {/* Main Content */}
       <main className="container mx-auto p-4 flex-grow flex items-center justify-center relative z-10">
         <div className="bg-gray-900 p-8 rounded-lg shadow-2xl max-w-md w-full text-gray-100 animate-glow">
-          <h1 className="text-2xl md:text-3xl font-heading font-bold text-gold-400 mb-6 text-center">
+          <h1 className="text-2xl md:text-3xl font-heading font-bold text-yellow-400 mb-6 text-center">
             {mode === 'login' ? 'Inicia Sesión en EsCine' : 'Regístrate en EsCine'}
           </h1>
 
-          {/* Toggle */}
           <div className="flex justify-center mb-6">
             <button
               onClick={() => setMode('login')}
@@ -166,8 +193,7 @@ function Login() {
             </button>
           </div>
 
-          {/* Formulario */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} method="POST">
             {mode === 'signup' && (
               <div>
                 <label className="block mb-2 font-body font-medium" htmlFor="name">
@@ -229,9 +255,11 @@ function Login() {
                 required
                 aria-describedby="password-error password-hint"
               />
-              <p id="password-hint" className="mt-1 text-xs text-gray-400 font-body">
-                Mínimo 8 caracteres, 1 mayúscula, 1 minúscula, 1 número, 1 carácter especial (@$!%*?&)
-              </p>
+              {mode === 'signup' && (
+                <p id="password-hint" className="mt-1 text-xs text-gray-400 font-body">
+                  Mínimo 6 caracteres
+                </p>
+              )}
               {errors.password && (
                 <p id="password-error" className="mt-1 text-sm text-red-400 font-body">{errors.password}</p>
               )}
@@ -254,7 +282,6 @@ function Login() {
         </div>
       </main>
 
-      {/* Notificación Toast */}
       {notification && (
         <div className="fixed bottom-4 right-4 bg-teal-500 text-gray-100 p-4 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in z-50" role="alert">
           <span className="font-body">{notification}</span>
@@ -268,8 +295,7 @@ function Login() {
         </div>
       )}
 
-{/* Footer */}
-<Footer />
+      <Footer />
     </div>
   );
 }

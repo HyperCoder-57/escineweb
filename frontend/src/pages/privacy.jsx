@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import logo from '../assets/logo.png';
 import Footer from '../components/Footer';
-
+ 
 function Privacy() {
   const currentDate = new Date().toLocaleDateString('es-MX', {
     day: 'numeric',

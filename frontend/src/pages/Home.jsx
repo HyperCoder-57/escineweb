@@ -7,20 +7,20 @@ import { useAuth } from '../context/AuthContext';
 
 function Home() {
   const navigate = useNavigate();
-  const { isLoggedIn, login, logout } = useAuth(); // Usar el contexto
+  const { isLoggedIn, user, login, logout } = useAuth(); // Obtener user del contexto
   const [showDialog, setShowDialog] = useState(false);
   const [timeLeft, setTimeLeft] = useState(3600);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentIndexEstrenos, setCurrentIndexEstrenos] = useState(1);
   const [currentIndexTodas, setCurrentIndexTodas] = useState(1);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [showBanner, setShowBanner] = useState(true);
+  const [showBanner, setShowBanner] = useState(true); // Añadido showBanner al useState
   const [estrenos, setEstrenos] = useState([]);
   const [todasPeliculas, setTodasPeliculas] = useState([]);
   const carouselEstrenosRef = useRef(null);
   const carouselTodasRef = useRef(null);
 
-  // Fetch datos desde el backend (ya está correcto)
+  // Fetch datos desde el backend
   useEffect(() => {
     const fetchMovies = async () => {
       try {
@@ -45,7 +45,7 @@ function Home() {
   const handleCloseDialog = () => setShowDialog(false);
   const handleAuth = () => {
     setShowDialog(false);
-    navigate('/auth');
+    navigate('/login');
   };
   const handleExplore = () => navigate('/movielist');
   const handleCloseBanner = () => setShowBanner(false);
@@ -125,9 +125,13 @@ function Home() {
     return `${hours}h ${minutes}m ${secs}s`;
   };
 
+  // Controlar showBanner basado en isLoggedIn
+  useEffect(() => {
+    setShowBanner(!isLoggedIn); // Ocultar banner si el usuario está loggeado
+  }, [isLoggedIn]);
+
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 animate-bg-fade relative overflow-hidden">
-      {/* Particles */}
       <div className="absolute inset-0 opacity-20">
         {[...Array(50)].map((_, i) => (
           <span
@@ -142,7 +146,6 @@ function Home() {
         ))}
       </div>
 
-      {/* Header */}
       <header className="bg-gray-900 bg-opacity-90 text-gray-100 p-4 shadow-lg z-10">
         <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <Link to="/" className="flex-shrink-0">
@@ -170,15 +173,14 @@ function Home() {
             <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-indigo-400">🔍</span>
           </div>
           <div className="flex flex-col items-center cursor-pointer" onClick={handleAvatarClick}>
-            <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center hover:bg-gray-400 transition-all" aria-label={isLoggedIn ? "Perfil de usuario" : "Iniciar sesión"}>
+            <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center hover:bg-gray-400 transition-all" aria-label={isLoggedIn && user ? `Perfil de ${user.name || 'Usuario'}` : "Iniciar sesión"}>
               <span className="text-xl text-gray-900">👤</span>
             </div>
-            <span className="text-sm font-body font-medium">{isLoggedIn ? "Usuario" : "Invitado"}</span>
+            <span className="text-sm font-body font-medium">{isLoggedIn && user ? user.name || 'Usuario' : 'Invitado'}</span>
           </div>
         </div>
       </header>
 
-      {/* Banner */}
       {showBanner && (
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-3 text-gray-100 text-center mb-6 shadow-md animate-glow relative z-10" aria-live="polite">
           <button
@@ -201,7 +203,6 @@ function Home() {
         </div>
       )}
 
-      {/* Modal Dialog */}
       {showDialog && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-75 z-50" role="dialog" aria-modal="true">
           <div className="bg-gray-900 p-6 rounded-xl shadow-2xl w-full max-w-sm transform animate-fade-in relative">
@@ -214,7 +215,7 @@ function Home() {
             </button>
             <h3 className="text-lg font-heading font-bold text-gray-100 mb-4">¡Únete al mundo del cine mágico!</h3>
             <p className="text-gray-100 font-body mb-4">
-              {isLoggedIn ? "¡Estás listo para vivir aventuras épicas en la gran pantalla!" : "¡Embárcate en una aventura! Inicia sesión o regístrate para desbloquear contenido exclusivo."}
+              {isLoggedIn && user ? `¡Estás listo para vivir aventuras épicas en la gran pantalla, ${user.name || 'Usuario'}!` : "¡Embárcate en una aventura! Inicia sesión o regístrate para desbloquear contenido exclusivo."}
             </p>
             {!isLoggedIn && (
               <div className="flex justify-center">
@@ -226,10 +227,19 @@ function Home() {
                 </button>
               </div>
             )}
-            {isLoggedIn && (
-              <div className="flex justify-center">
+            {isLoggedIn && user && (
+              <div className="flex justify-center gap-4">
+                <Link
+                  to="/profile"
+                  className="bg-indigo-600 text-gray-100 px-4 py-2 rounded-full hover:bg-indigo-500 transition-all shadow-md hover:shadow-indigo-600/50 hover-sparkle relative"
+                >
+                  Ver Perfil
+                </Link>
                 <button
-                  onClick={logout}
+                  onClick={() => {
+                    logout();
+                    handleCloseDialog();
+                  }}
                   className="bg-red-600 text-gray-100 px-4 py-2 rounded-full hover:bg-red-500 transition-all shadow-md hover:shadow-red-600/50 hover-sparkle relative"
                 >
                   Cerrar sesión
@@ -240,7 +250,6 @@ function Home() {
         </div>
       )}
 
-      {/* Main Content */}
       <main className="container mx-auto p-4 flex-grow relative z-10">
         <section className="mb-8 text-center">
           <h2 className="text-3xl font-heading font-extrabold text-gray-100 mb-4 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
@@ -367,7 +376,6 @@ function Home() {
         </section>
       </main>
 
-      {/* Footer */}
       <Footer />
     </div>
   );

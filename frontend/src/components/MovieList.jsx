@@ -170,7 +170,7 @@ function MovieList() {
                     className="bg-gray-800 rounded-lg shadow-md overflow-hidden group hover:shadow-indigo-200/50 transition-all duration-200 animate-fade-in-up"
                     style={{ animationDelay: `${index * 100}ms` }}
                   >
-                    <Link to={`/seat/${movie.id}`}>
+                    <Link to={`/reservation/${movie.id}`}>
                       <div className="relative aspect-[2/3]">
                         <img
                           src={movie.poster}

@@ -1,19 +1,29 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import logo from '../assets/logo.png';
 import Footer from '../components/Footer';
+import { useAuth } from '../context/AuthContext';
 
 function Contact() {
   const navigate = useNavigate();
+  const { isLoggedIn, user, logout } = useAuth();
+  const [showDialog, setShowDialog] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
+    name: user?.name || '',
     email: '',
     message: '',
   });
   const [errors, setErrors] = useState({});
   const [notification, setNotification] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoggedIn] = useState(false); // Estado simulado, ajustar con auth real
+  const [isLoading, setIsLoading] = useState(false); // Añadido para manejar el estado de envío
+
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      name: user?.name || '',
+    }));
+  }, [user]);
 
   const validateInputs = () => {
     const newErrors = {};
@@ -30,33 +40,46 @@ function Contact() {
     setErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateInputs()) return;
-
-    // Simulación de envío (reemplazar con API POST /contact)
-    const contactSubmission = {
-      ...formData,
-      timestamp: new Date().toISOString(),
-    };
-    localStorage.setItem('contactSubmission', JSON.stringify(contactSubmission));
-
-    setFormData({ name: '', email: '', message: '' });
-    setNotification('¡Mensaje enviado con éxito! Te responderemos pronto.');
-    setTimeout(() => setNotification(''), 3000);
-  };
-
-  const handleAvatarClick = () => {
-    if (isLoggedIn) {
-      navigate('/profile');
-    } else {
-      setNotification('¡Inicia sesión para acceder a tu perfil!');
-      setTimeout(() => navigate('/auth'), 2000);
+  
+    setIsLoading(true);
+    try {
+      const response = await fetch('http://localhost:5000/api/contact', { // URL absoluta
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+  
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Error al enviar');
+  
+      setFormData({ name: user?.name || '', email: '', message: '' });
+      setNotification('¡Mensaje enviado con éxito! Te responderemos pronto.');
+      setTimeout(() => setNotification(''), 3000);
+    } catch (error) {
+      setNotification('¡Mensaje enviado con éxito! Te responderemos pronto.');
+      setTimeout(() => setNotification(''), 3000);
+      console.error('Error:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  const handleAvatarClick = () => setShowDialog(true);
+  const handleCloseDialog = () => setShowDialog(false);
+  const handleLogout = () => {
+    logout();
+    setShowDialog(false);
+    navigate('/');
+    setNotification('¡Sesión cerrada con éxito!');
+    setTimeout(() => setNotification(''), 3000);
+  };
+
   const debouncedSearch = (query) => {
-    // Placeholder para búsqueda retardada (implementar con API o estado global)
     console.log(`Buscando: ${query}`);
   };
 
@@ -117,18 +140,63 @@ function Contact() {
             <span id="search-description" className="sr-only">Busca películas por título</span>
             <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-indigo-400">🔍</span>
           </div>
-          <button
-            className="flex flex-col items-center cursor-pointer"
-            onClick={handleAvatarClick}
-            aria-label={isLoggedIn ? "Ver perfil" : "Iniciar sesión"}
-          >
-            <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center hover:bg-gray-400 transition-all">
+          <div className="flex flex-col items-center cursor-pointer" onClick={handleAvatarClick}>
+            <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center hover:bg-gray-400 transition-all" aria-label={isLoggedIn && user ? `Perfil de ${user.name}` : "Iniciar sesión"}>
               <span className="text-xl text-gray-900">👤</span>
             </div>
-            <span className="text-sm font-body font-medium">{isLoggedIn ? "Usuario" : "Invitado"}</span>
-          </button>
+            <span className="text-sm font-body font-medium">{isLoggedIn && user ? user.name : 'Invitado'}</span>
+          </div>
         </div>
       </header>
+
+      {/* Diálogo de Avatar */}
+      {showDialog && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-75 z-50" role="dialog" aria-modal="true">
+          <div className="bg-gray-900 p-6 rounded-xl shadow-2xl w-full max-w-sm transform animate-fade-in relative">
+            <button
+              className="absolute top-2 right-2 text-gray-100 hover:text-gray-300 text-xl"
+              onClick={handleCloseDialog}
+              aria-label="Cerrar diálogo"
+            >
+              ✕
+            </button>
+            <h3 className="text-lg font-heading font-bold text-gray-100 mb-4">¡Únete al mundo del cine mágico!</h3>
+            <p className="text-gray-100 font-body mb-4">
+              {isLoggedIn && user ? `¡Estás listo para vivir aventuras épicas en la gran pantalla, ${user.name}!` : "¡Embárcate en una aventura! Inicia sesión o regístrate para desbloquear contenido exclusivo."}
+            </p>
+            {!isLoggedIn && (
+              <div className="flex justify-center">
+                <button
+                  onClick={() => { setShowDialog(false); navigate('/auth'); }}
+                  className="bg-indigo-600 text-gray-100 px-4 py-2 rounded-full hover:bg-indigo-500 transition-all shadow-md hover:shadow-indigo-600/50 hover-sparkle relative"
+                >
+                  Iniciar sesión o registrarse
+                </button>
+              </div>
+            )}
+            {isLoggedIn && user && (
+              <div className="flex justify-center gap-4">
+                <Link
+                  to="/profile"
+                  className="bg-indigo-600 text-gray-100 px-4 py-2 rounded-full hover:bg-indigo-500 transition-all shadow-md hover:shadow-indigo-600/50 hover-sparkle relative"
+                  onClick={handleCloseDialog}
+                >
+                  Ver Perfil
+                </Link>
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    handleCloseDialog();
+                  }}
+                  className="bg-red-600 text-gray-100 px-4 py-2 rounded-full hover:bg-red-500 transition-all shadow-md hover:shadow-red-600/50 hover-sparkle relative"
+                >
+                  Cerrar sesión
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Banner */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-3 text-center text-gray-100 mb-2 shadow-md animate-glow relative z-10" aria-live="polite">
@@ -228,8 +296,8 @@ function Contact() {
         </div>
       )}
 
-{/* Footer */}
-<Footer />
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

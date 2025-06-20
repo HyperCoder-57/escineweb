@@ -9,6 +9,7 @@ import SeatSelector from './components/SeatSelector';
 import Contact from './pages/contact';
 import PrivacyPolicy from './pages/privacy';
 import Reviews from './pages/reviews';
+import VerifyEmail from './pages/VerifyEmail';
 import { AuthProvider, useAuth } from './context/AuthContext'; // Importar AuthProvider y useAuth
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/verify" element={<VerifyEmail />} />
           <Route path="/movielist" element={<MovieList />} />
           <Route path="/reservation/:id" element={<ReservationSummary />} />
           <Route
@@ -45,7 +47,7 @@ function ProtectedRoute({ children }) {
 
   useEffect(() => {
     if (!isLoggedIn) {
-      navigate('/login'); // Redirigir a /login en lugar de /auth
+      navigate('/login'); // Redirigir a /login 
     }
   }, [isLoggedIn, navigate]);
 

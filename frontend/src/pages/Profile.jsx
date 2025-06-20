@@ -2,43 +2,61 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import logo from '../assets/logo.png';
 import Footer from '../components/Footer';
+import { useAuth } from '../context/AuthContext';
+ 
 
 function Profile() {
   const navigate = useNavigate();
-  const initialUser = {
-    name: "Usuario Ejemplo",
-    email: "usuario@example.com",
-    password: "pass123",
-    bookings: [
-      { id: "1", title: "Sin Límites", date: "2025-06-05", time: "14:00", status: "active" },
-      { id: "16", title: "Epic Adventure", date: "2025-06-01", time: "10:00", status: "canceled" },
-    ],
-  };
-  const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem('user');
-    return savedUser ? { ...initialUser, ...JSON.parse(savedUser), bookings: Array.isArray(JSON.parse(savedUser).bookings) ? JSON.parse(savedUser).bookings : initialUser.bookings } : initialUser;
-  });
+  const { user, login, logout } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [editedUser, setEditedUser] = useState({ name: user.name, email: user.email, currentPassword: '', newPassword: '' });
+  const [editedUser, setEditedUser] = useState({ name: '', email: '', currentPassword: '', newPassword: '' });
   const [errors, setErrors] = useState({});
   const [notification, setNotification] = useState('');
   const [showCancelConfirm, setShowCancelConfirm] = useState(null);
+  const [bookings, setBookings] = useState([]);
 
+  // Cargar datos del usuario
   useEffect(() => {
-    setEditedUser({ name: user.name, email: user.email, currentPassword: '', newPassword: '' });
-    localStorage.setItem('user', JSON.stringify(user));
-  }, [user]);
+    const fetchProfile = async () => {
+      if (!user) {
+        setNotification('No estás loggeado. Inicia sesión nuevamente.');
+        setTimeout(() => navigate('/login'), 3000);
+        return;
+      }
+      try {
+        const response = await fetch('http://localhost:5000/api/users/profile', {
+          method: 'GET',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token') || ''}` // Asegúrate de que el token exista
+          },
+          credentials: 'include', // Asegura que se envíen cookies/sesiones
+        });
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText} - ${await response.text()}`);
+        }
+        const data = await response.json();
+        setEditedUser({ name: data.name, email: data.email, currentPassword: '', newPassword: '' });
+        setBookings(data.bookings || []);
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        setNotification(`Error al cargar el perfil. Inicia sesión nuevamente. Detalles: ${error.message}`);
+        setTimeout(() => navigate('/login'), 3000);
+      }
+    };
+    fetchProfile();
+  }, [user, navigate]);
 
   const validateInputs = () => {
     const newErrors = {};
-    if (!editedUser.name.trim()) newErrors.name = "El nombre es obligatorio";
-    if (!editedUser.email || !/\S+@\S+\.\S+/.test(editedUser.email)) newErrors.email = "Correo inválido";
-    if (isEditing && (editedUser.newPassword || editedUser.name !== user.name || editedUser.email !== user.email)) {
-      if (!editedUser.currentPassword) newErrors.currentPassword = "Contraseña actual requerida";
-      else if (editedUser.currentPassword !== user.password) newErrors.currentPassword = "Contraseña actual incorrecta";
+    if (!editedUser.name.trim()) newErrors.name = 'El nombre es obligatorio';
+    if (!editedUser.email || !/\S+@\S+\.\S+/.test(editedUser.email)) newErrors.email = 'Correo inválido';
+    if (isEditing && (editedUser.newPassword || editedUser.name !== (user?.name || editedUser.name) || editedUser.email !== (user?.email || editedUser.email))) {
+      if (!editedUser.currentPassword) newErrors.currentPassword = 'Contraseña actual requerida';
+      // Aquí asumimos que user.password no está disponible directamente; ajusta según tu backend
     }
-    if (editedUser.newPassword && editedUser.newPassword.length < 8) newErrors.newPassword = "La nueva contraseña debe tener al menos 8 caracteres";
+    if (editedUser.newPassword && editedUser.newPassword.length < 8) newErrors.newPassword = 'La nueva contraseña debe tener al menos 8 caracteres';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -46,31 +64,57 @@ function Profile() {
   const handleSave = async () => {
     if (!validateInputs()) return;
     setIsSaving(true);
-    setTimeout(() => {
-      setUser({ ...user, name: editedUser.name, email: editedUser.email, password: editedUser.newPassword || user.password });
+    try {
+      const response = await fetch('http://localhost:5000/api/users/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          name: editedUser.name,
+          email: editedUser.email,
+          currentPassword: editedUser.currentPassword,
+          newPassword: editedUser.newPassword,
+        }),
+      });
+      if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText} - ${await response.text()}`);
+      const data = await response.json();
+      login({ ...user, name: editedUser.name, email: editedUser.email, password: editedUser.newPassword || user?.password }); // Actualizar AuthContext
       setIsEditing(false);
       setNotification('¡Perfil actualizado correctamente!');
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      setNotification(`Error al guardar los cambios. Detalles: ${error.message}`);
+    } finally {
       setIsSaving(false);
       setTimeout(() => setNotification(''), 3000);
-    }, 1000);
+    }
   };
 
   const handleCancelBooking = (bookingId) => {
     setShowCancelConfirm(bookingId);
   };
 
-  const confirmCancelBooking = (bookingId) => {
-    setUser({
-      ...user,
-      bookings: user.bookings.map((b) => (b.id === bookingId ? { ...b, status: "canceled" } : b)),
-    });
-    setShowCancelConfirm(null);
-    setNotification('¡Reserva cancelada con éxito!');
-    setTimeout(() => setNotification(''), 3000);
+  const confirmCancelBooking = async (bookingId) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/bookings/cancel/${bookingId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error(`Error ${response.status}: ${response.statusText} - ${await response.text()}`);
+      setBookings(bookings.map(b => b.id === bookingId ? { ...b, status: 'canceled' } : b));
+      setNotification('¡Reserva cancelada con éxito!');
+    } catch (error) {
+      console.error('Error canceling booking:', error);
+      setNotification(`Error al cancelar la reserva. Detalles: ${error.message}`);
+    } finally {
+      setShowCancelConfirm(null);
+      setTimeout(() => setNotification(''), 3000);
+    }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
+    logout();
     setNotification('Sesión cerrada. ¡Vuelve pronto!');
     setTimeout(() => navigate('/'), 1000);
   };
@@ -86,9 +130,17 @@ function Profile() {
     hour12: true,
   });
 
+  if (!user) {
+    return (
+      <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 animate-bg text-gray-100 relative overflow-hidden">
+        <p className="text-center py-10 text-gray-300 font-body">No estás loggeado. <Link to="/login" className="text-indigo-400 hover:underline">Inicia sesión</Link> para ver tu perfil.</p>
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-blue-800 animate-bg text-gray-100 relative overflow-hidden">
-      {/* Partículas */}
       <div className="absolute inset-0 opacity-20">
         {[...Array(50)].map((_, i) => (
           <span
@@ -103,7 +155,6 @@ function Profile() {
         ))}
       </div>
 
-      {/* Header */}
       <header className="bg-gray-900 bg-opacity-90 text-gray-100 p-4 shadow-lg z-10">
         <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <Link to="/" className="flex-shrink-0">
@@ -117,14 +168,10 @@ function Profile() {
         </div>
       </header>
 
-      {/* Banner */}
       <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-3 text-center text-gray-100 mb-2 shadow-md animate-glow relative z-10" aria-live="polite">
-        <p className="text-base font-body font-semibold">
-          ¡vive la magia del cine!
-        </p>
+        <p className="text-base font-body font-semibold">¡Vive la magia del cine!</p>
       </div>
 
-      {/* Main Content */}
       <main className="container mx-auto p-4 flex-grow relative z-10">
         <div className="max-w-3xl mx-auto bg-gray-900 p-8 rounded-lg shadow-2xl animate-glow">
           <h1 className="text-3xl font-heading font-bold text-gold-400 mb-6">Perfil de Usuario</h1>
@@ -132,9 +179,7 @@ function Profile() {
             <h2 className="text-xl font-heading font-semibold mb-4 text-gray-100">Datos Personales</h2>
             <div className="space-y-6">
               <div>
-                <label htmlFor="name" className="block text-base font-body font-medium mb-1 text-gray-300">
-                  Nombre
-                </label>
+                <label htmlFor="name" className="block text-base font-body font-medium mb-1 text-gray-300">Nombre</label>
                 {isEditing ? (
                   <div>
                     <input
@@ -147,18 +192,14 @@ function Profile() {
                       aria-invalid={!!errors.name}
                       aria-describedby={errors.name ? 'name-error' : undefined}
                     />
-                    {errors.name && (
-                      <p id="name-error" className="text-red-400 text-sm mt-1 font-body">{errors.name}</p>
-                    )}
+                    {errors.name && <p id="name-error" className="text-red-400 text-sm mt-1 font-body">{errors.name}</p>}
                   </div>
                 ) : (
-                  <p className="text-lg text-gray-100 font-body">{user.name}</p>
+                  <p className="text-lg text-gray-100 font-body">{editedUser.name || 'Sin nombre'}</p>
                 )}
               </div>
               <div>
-                <label htmlFor="email" className="block text-base font-body font-medium mb-1 text-gray-300">
-                  Correo Electrónico
-                </label>
+                <label htmlFor="email" className="block text-base font-body font-medium mb-1 text-gray-300">Correo Electrónico</label>
                 {isEditing ? (
                   <div>
                     <input
@@ -171,20 +212,16 @@ function Profile() {
                       aria-invalid={!!errors.email}
                       aria-describedby={errors.email ? 'email-error' : undefined}
                     />
-                    {errors.email && (
-                      <p id="email-error" className="text-red-400 text-sm mt-1 font-body">{errors.email}</p>
-                    )}
+                    {errors.email && <p id="email-error" className="text-red-400 text-sm mt-1 font-body">{errors.email}</p>}
                   </div>
                 ) : (
-                  <p className="text-lg text-gray-100 font-body">{user.email}</p>
+                  <p className="text-lg text-gray-100 font-body">{editedUser.email || 'Sin email'}</p>
                 )}
               </div>
               {isEditing && (
                 <>
                   <div>
-                    <label htmlFor="currentPassword" className="block text-base font-body font-medium mb-1 text-gray-300">
-                      Contraseña Actual
-                    </label>
+                    <label htmlFor="currentPassword" className="block text-base font-body font-medium mb-1 text-gray-300">Contraseña Actual</label>
                     <input
                       id="currentPassword"
                       type="password"
@@ -195,14 +232,10 @@ function Profile() {
                       aria-invalid={!!errors.currentPassword}
                       aria-describedby={errors.currentPassword ? 'currentPassword-error' : undefined}
                     />
-                    {errors.currentPassword && (
-                      <p id="currentPassword-error" className="text-red-400 text-sm mt-1 font-body">{errors.currentPassword}</p>
-                    )}
+                    {errors.currentPassword && <p id="currentPassword-error" className="text-red-400 text-sm mt-1 font-body">{errors.currentPassword}</p>}
                   </div>
                   <div>
-                    <label htmlFor="newPassword" className="block text-base font-body font-medium mb-1 text-gray-300">
-                      Nueva Contraseña (Opcional)
-                    </label>
+                    <label htmlFor="newPassword" className="block text-base font-body font-medium mb-1 text-gray-300">Nueva Contraseña (Opcional)</label>
                     <input
                       id="newPassword"
                       type="password"
@@ -213,9 +246,7 @@ function Profile() {
                       aria-invalid={!!errors.newPassword}
                       aria-describedby={errors.newPassword ? 'newPassword-error' : undefined}
                     />
-                    {errors.newPassword && (
-                      <p id="newPassword-error" className="text-red-400 text-sm mt-1 font-body">{errors.newPassword}</p>
-                    )}
+                    {errors.newPassword && <p id="newPassword-error" className="text-red-400 text-sm mt-1 font-body">{errors.newPassword}</p>}
                   </div>
                 </>
               )}
@@ -259,9 +290,9 @@ function Profile() {
           </section>
           <section>
             <h2 className="text-xl font-heading font-semibold mb-4 text-gray-100">Historial de Reservas</h2>
-            {user.bookings.length > 0 ? (
+            {bookings.length > 0 ? (
               <div className="space-y-6">
-                {user.bookings.map((booking) => (
+                {bookings.map((booking) => (
                   <div
                     key={booking.id}
                     className={`p-4 rounded-lg shadow-md transition-all duration-200 flex flex-col sm:flex-row sm:items-center sm:justify-between ${booking.status === 'active' ? 'bg-teal-900' : booking.status === 'canceled' ? 'bg-red-900' : 'bg-gray-800'}`}
@@ -330,7 +361,6 @@ function Profile() {
         </div>
       </main>
 
-      {/* Notificación Toast */}
       {notification && (
         <div className="fixed bottom-4 right-4 bg-teal-500 text-gray-100 p-4 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in z-50" role="alert">
           <span className="font-body">{notification}</span>
@@ -344,8 +374,7 @@ function Profile() {
         </div>
       )}
 
-{/* Footer */}
-<Footer />
+      <Footer />
     </div>
   );
 }

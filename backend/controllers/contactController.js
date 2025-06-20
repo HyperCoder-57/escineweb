@@ -1,25 +1,31 @@
-const { Contact } = require('../models');
-const { sendEmail } = require('../utils/email');
-const { validationResult } = require('express-validator');
+const { sendUserMessage } = require('../utils/email');
 
-exports.submitContact = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-
+exports.sendContactMessage = async (req, res) => {
   try {
+    console.log('Recibida solicitud POST /api/contact con datos:', req.body);
     const { name, email, message } = req.body;
-    const contact = await Contact.create({ name, email, message });
 
-    await sendEmail({
-      to: email,
-      subject: 'Gracias por contactarnos',
-      text: `Hola ${name},\n\nGracias por tu mensaje: "${message}". Te responderemos pronto.\n\nEsCine`,
-    });
+    // Validar datos
+    if (!name || !email || !message) {
+      console.log('Validación fallida:', { name, email, message });
+      return res.status(400).json({ error: 'Todos los campos son obligatorios' });
+    }
 
-    res.status(201).json({ message: 'Mensaje enviado con éxito' });
+    console.log('Enviando mensaje de usuario...');
+    const success = await sendUserMessage(name, email, message);
+    if (!success) {
+      throw new Error('Fallo al enviar el correo');
+    }
+
+    // Obtener el modelo Contact inicializado desde server.js
+    const Contact = req.app.get('models').Contact;
+    console.log('Guardando en base de datos...', { Contact: typeof Contact === 'function' ? 'Factory' : 'Model' });
+    const contact = await Contact.create({ name, email, message, timestamp: new Date() });
+
+    console.log('Respuesta exitosa preparada.');
+    res.status(200).json({ message: 'Mensaje enviado con éxito. Te responderemos pronto.' });
   } catch (error) {
-    res.status(500).json({ error: 'Error al enviar el mensaje' });
+    console.error('Error en sendContactMessage:', error);
+    res.status(500).json({ error: 'Error al procesar el mensaje. Intenta de nuevo.', details: error.message });
   }
 };

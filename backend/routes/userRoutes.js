@@ -1,18 +1,41 @@
 const express = require('express');
-const router = express.Router();
-const { register, login, getProfile } = require('../controllers/UserController');
-const auth = require('../middleware/auth');
-const { check } = require('express-validator');
+const { body, validationResult } = require('express-validator');
+const { register, verifyEmail, login, getProfile } = require('../controllers/UserController');
+const authMiddleware = require('../middleware/authMiddleware');
 
-router.post('/register', [
-  check('name').notEmpty(),
-  check('email').isEmail(),
-  check('password').isLength({ min: 6 }),
-], register);
-router.post('/login', [
-  check('email').isEmail(),
-  check('password').notEmpty(),
-], login);
-router.get('/profile', auth, getProfile);
+const router = express.Router();
+
+// Validaciones
+const validateRegister = [
+  body('name').notEmpty().withMessage('El nombre es requerido'),
+  body('email').isEmail().withMessage('Email inválido').normalizeEmail(),
+  body('password').isLength({ min: 6 }).withMessage('La contraseña debe tener al menos 6 caracteres'),
+];
+
+const validateLogin = [
+  body('email').isEmail().withMessage('Email inválido').normalizeEmail(),
+  body('password').notEmpty().withMessage('La contraseña es requerida'),
+];
+
+// Rutas
+router.post('/users/register', validateRegister, (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+  register(req, res);
+});
+
+router.post('/users/login', validateLogin, (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+  login(req, res);
+});
+
+router.get('/users/verify/:code', verifyEmail);
+
+router.get('/users/profile', authMiddleware, getProfile);
 
 module.exports = router;

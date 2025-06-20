@@ -20,10 +20,19 @@ module.exports = (sequelize) => {
       type: DataTypes.STRING,
       allowNull: false,
     },
-    createdAt: {
-      type: DataTypes.DATE,
-      defaultValue: DataTypes.NOW,
+    verified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
     },
+    verificationCode: {
+      type: DataTypes.STRING, // Aquí guardamos el código de 6 dígitos
+    },
+    verificationCodeExpires: {
+      type: DataTypes.DATE, // Aquí guardamos hasta cuándo es válido el código
+    },
+  }, {
+    timestamps: true,
+    tableName: 'Users',
   });
 
   User.associate = (models) => {

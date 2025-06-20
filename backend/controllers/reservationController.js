@@ -1,6 +1,6 @@
 const { Seat, Reservation, Movie, Showtime } = require('../models');
 const { validationResult } = require('express-validator');
-const sequelize = require('../config/db.config');
+const sequelize = require('../config/db.config.js');
 
 exports.getSeats = async (req, res) => {
   try {

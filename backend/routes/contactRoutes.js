@@ -1,12 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { submitContact } = require('../controllers/contactController');
-const { check } = require('express-validator');
+const contactController = require('../controllers/contactController');
 
-router.post('/', [
-  check('name').notEmpty(),
-  check('email').isEmail(),
-  check('message').notEmpty(),
-], submitContact);
+router.post('/contact', contactController.sendContactMessage);
 
 module.exports = router;
