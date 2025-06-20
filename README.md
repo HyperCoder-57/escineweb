@@ -130,6 +130,10 @@ git clone git@github.com:HyperCoder-57/escineweb.git
      psql -U postgres -d escine -f database/datos.sql 
      ```
    - **Explicación**: Estos comandos usan `psql` para agregar películas y horarios de muestra a la base de datos.
+   ## ⚠️ importante: 
+   si la inserción falla solo ejecutala nuevamente 
+
+
 
 4. **Usa las credenciales de prueba**:
    - En la carpeta `backend/`, encontrarás un archivo `.env` con credenciales preconfiguradas para este proyecto
