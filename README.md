@@ -63,10 +63,9 @@ Necesitas instalar estas herramientas antes de empezar:
 Abre una terminal (PowerShell en Windows, Terminal en Mac/Linux) y ejecuta:
 
 ```bash
-git clone https://github.com/HyperCoder-57/EsCine.git
+git clone git@github.com:HyperCoder-57/escineweb.git
 ```
-
-> Reemplaza la URL con la del repositorio real si es diferente (por ejemplo, `https://github.com/tu-usuario/escine.git`).
+ 
 
 ---
 
@@ -131,10 +130,10 @@ git clone https://github.com/HyperCoder-57/EsCine.git
      psql -U postgres -d escine -f database/insert_movies.sql
      psql -U postgres -d escine -f database/insert_showtimes.sql
      ```
-   - **Explicación**: Estos comandos usan `psql` para agregar películas (como "Cadena perpetua") y horarios de muestra a la base de datos.
+   - **Explicación**: Estos comandos usan `psql` para agregar películas y horarios de muestra a la base de datos.
 
 4. **Usa las credenciales de prueba**:
-   - En la carpeta `backend/`, encontrarás un archivo `.env` con credenciales preconfiguradas para este proyecto escolar. Contiene:
+   - En la carpeta `backend/`, encontrarás un archivo `.env` con credenciales preconfiguradas para este proyecto:
      ```
      DB_HOST=localhost
      DB_USER=postgres
@@ -238,8 +237,4 @@ Este proyecto usa la licencia MIT. ¡Puedes usarlo y modificarlo libremente!
    - Asegúrate de que el `README.md` actualizado esté en `https://github.com/HyperCoder-57/EsCine`.
 
 ---
-
-### **Siguientes Pasos**
-- Prueba las instrucciones en una máquina limpia para validarlas.
-- Si encuentras errores (por ejemplo, al insertar datos o iniciar el backend), compárteme los logs.
-- ¡Tu proyecto EsCine está listo para impresionar a todos! 😄
+ 
