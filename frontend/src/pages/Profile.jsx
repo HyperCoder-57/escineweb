@@ -16,7 +16,7 @@ function Profile() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(null);
   const [bookings, setBookings] = useState([]);
 
-  // Cargar datos del usuario
+
   useEffect(() => {
     const fetchProfile = async () => {
       if (!user) {
@@ -54,7 +54,7 @@ function Profile() {
     if (!editedUser.email || !/\S+@\S+\.\S+/.test(editedUser.email)) newErrors.email = 'Correo inválido';
     if (isEditing && (editedUser.newPassword || editedUser.name !== (user?.name || editedUser.name) || editedUser.email !== (user?.email || editedUser.email))) {
       if (!editedUser.currentPassword) newErrors.currentPassword = 'Contraseña actual requerida';
-      // Aquí asumimos que user.password no está disponible directamente; ajusta según tu backend
+
     }
     if (editedUser.newPassword && editedUser.newPassword.length < 8) newErrors.newPassword = 'La nueva contraseña debe tener al menos 8 caracteres';
     setErrors(newErrors);

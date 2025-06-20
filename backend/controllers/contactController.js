@@ -5,7 +5,7 @@ exports.sendContactMessage = async (req, res) => {
     console.log('Recibida solicitud POST /api/contact con datos:', req.body);
     const { name, email, message } = req.body;
 
-    // Validar datos
+
     if (!name || !email || !message) {
       console.log('Validación fallida:', { name, email, message });
       return res.status(400).json({ error: 'Todos los campos son obligatorios' });
@@ -17,7 +17,7 @@ exports.sendContactMessage = async (req, res) => {
       throw new Error('Fallo al enviar el correo');
     }
 
-    // Obtener el modelo Contact inicializado desde server.js
+
     const Contact = req.app.get('models').Contact;
     console.log('Guardando en base de datos...', { Contact: typeof Contact === 'function' ? 'Factory' : 'Model' });
     const contact = await Contact.create({ name, email, message, timestamp: new Date() });

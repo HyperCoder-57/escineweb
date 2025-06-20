@@ -25,10 +25,10 @@ module.exports = (sequelize) => {
     },
   });
 
-  // Opcional: Definir asociaciones si las hay (e.g., con User)
+
   Contact.associate = (models) => {
-    // Ejemplo: si Contact estuviera relacionado con User
-    // Contact.belongsTo(models.User, { foreignKey: 'userId' });
+
+
   };
 
   return Contact;

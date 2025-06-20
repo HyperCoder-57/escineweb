@@ -120,30 +120,19 @@ git clone git@github.com:HyperCoder-57/escineweb.git
      ```
 
 3. **Inserta películas y horarios de muestra**:
-   - En la carpeta `database/` del proyecto, encontrarás dos archivos: `insert_movies.sql` y `insert_showtimes.sql`.
+   - En la carpeta `database/` del proyecto, encontrarás un archivo: `datos.sql`.
    - Desde la terminal, ve a la raíz del proyecto (donde clonaste `escine`):
      ```bash
      cd escine
      ```
    - Ejecuta estos comandos para insertar los datos:
      ```bash
-     psql -U postgres -d escine -f database/insert_movies.sql
-     psql -U postgres -d escine -f database/insert_showtimes.sql
+     psql -U postgres -d escine -f database/datos.sql 
      ```
    - **Explicación**: Estos comandos usan `psql` para agregar películas y horarios de muestra a la base de datos.
 
 4. **Usa las credenciales de prueba**:
-   - En la carpeta `backend/`, encontrarás un archivo `.env` con credenciales preconfiguradas para este proyecto:
-     ```
-     DB_HOST=localhost
-     DB_USER=postgres
-     DB_PASSWORD=1234
-     DB_NAME=escine
-     DB_PORT=5432
-     SUPPORT_EMAIL=test@escine.com
-     EMAIL_PASSWORD=testpass
-     ```
-   - **Nota importante**: Estas credenciales son solo para pruebas y no deben usarse en producción ni en cuentas reales. Si quieres usar tu propio correo, genera una [contraseña de aplicación](https://myaccount.google.com/apppasswords) para Gmail y actualiza el `.env` antes de iniciar.
+   - En la carpeta `backend/`, encontrarás un archivo `.env` con credenciales preconfiguradas para este proyecto
 
 ¡Listo! El backend creará las tablas y, con estos pasos, tendrás datos para probar.
 
@@ -205,14 +194,4 @@ git clone git@github.com:HyperCoder-57/escineweb.git
 4. Abre un Pull Request en GitHub.
 
 ---
-
-## 📝 Licencia
-Este proyecto usa la licencia MIT. ¡Puedes usarlo y modificarlo libremente!
-
----
-
-### **Notas Adicionales**
-- El archivo `.env` y los scripts `.sql` están incluidos para facilitar las pruebas escolares. No uses estas credenciales en producción.
-- Si quieres colaborar, abre un "issue" en GitHub para sugerencias o problemas.
-
----
+ 

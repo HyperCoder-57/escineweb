@@ -1,3 +1,13 @@
+-- Crear ENUM si aún no existe
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'enum_Seats_status') THEN
+        CREATE TYPE "enum_Seats_status" AS ENUM ('reserved', 'available');
+    END IF;
+END
+$$;
+
+
 INSERT INTO "Movies" ( title, genre, duration, poster, "releaseYear", "createdAt", "updatedAt") VALUES
 
 
@@ -207,6 +217,90 @@ INSERT INTO "Movies" ( title, genre, duration, poster, "releaseYear", "createdAt
 ('El despertar de la bestia', 'Accion, Terror, Suspense', 90, 'https://image.tmdb.org/t/p/w500/wHsQwrqiICdEkIXFcX968rVqB3s.jpg', 2024, NOW(), NOW()),
 ('Popeye the Slayer Man', 'Terror', 88, 'https://image.tmdb.org/t/p/w500/nVwu3mN7hr1yF467pGct3yQFM41.jpg', 2025, NOW(), NOW()),
 ('Zoe, mi amiga muerta', 'Comedia, Belica, Drama', 103, 'https://image.tmdb.org/t/p/w500/c7MRukxxhoEnX7SPGVxfUmQoWBc.jpg', 2024, NOW(), NOW()),
-('Confidencial (Black Bag)', 'Drama, Misterio, Suspense', 94, 'https://image.tmdb.org/t/p/w500/1MTMK7xcZECsUir3EptGGI1fE2n.jpg', 2025, NOW(), NOW());
+('Confidencial (Black Bag)', 'Drama, Misterio, Suspense', 94, 'https://image.tmdb.org/t/p/w500/1MTMK7xcZECsUir3EptGGI1fE2n.jpg', 2025, NOW(), NOW())
+ON CONFLICT ("id") DO NOTHING;
+
+-- Insertar sucursales
+INSERT INTO "Branches" ("name", "location", "createdAt", "updatedAt")
+VALUES
+('Perisur', 'Ciudad de México', NOW(), NOW()),
+('Santa Fe', 'Ciudad de México', NOW(), NOW())
+ON CONFLICT ("name") DO NOTHING;
+ 
 
 
+
+
+-- Insertar usuario
+INSERT INTO "Users" ("name", "email", "password", "verified", "createdAt", "updatedAt")
+VALUES ('Juan Pérez', 'juan3@example.com', '$2b$10$Xo5zL2r5uXz3y7k9pQ8mO.8k9mN3pQ8mO.8k9mN3pQ8mO', true, NOW(), NOW())
+ON CONFLICT ("email") DO NOTHING;
+
+-- Insertar 192 showtimes
+INSERT INTO "Showtimes" ("movieId", "branchId", "date", "time", "createdAt", "updatedAt")
+SELECT
+  m.id,
+  (SELECT id FROM "Branches" WHERE "name" = CASE WHEN m.id % 2 = 1 THEN 'Perisur' ELSE 'Santa Fe' END LIMIT 1),
+  ('2025-06-15'::date + (m.id / 4)::int),
+  CASE
+    WHEN m.id % 4 = 1 THEN '18:00:00'::time
+    WHEN m.id % 4 = 2 THEN '20:00:00'::time
+    WHEN m.id % 4 = 3 THEN '15:00:00'::time
+    ELSE '22:00:00'::time
+  END,
+  NOW(),
+  NOW()
+FROM generate_series(1, 192) AS m(id)
+ON CONFLICT ("branchId", "movieId", "date", "time") DO NOTHING;
+
+-- Insertar asientos para los 192 showtimes (150 asientos por showtime)
+INSERT INTO "Seats" ("showtimeId", "row", "col", "status", "createdAt", "updatedAt")
+SELECT
+  s.id,
+  gs.row,
+  gs.col,
+  CASE
+    WHEN gs.row = 0 AND gs.col = 0 THEN 'available'::"enum_Seats_status"
+    WHEN RANDOM() < 0.3 THEN 'reserved'::"enum_Seats_status"
+    ELSE 'available'::"enum_Seats_status"
+  END,
+  NOW(),
+  NOW()
+FROM "Showtimes" s
+CROSS JOIN (
+  SELECT row, col
+  FROM generate_series(0, 9) AS row,
+       generate_series(0, 14) AS col
+) AS gs
+WHERE s."movieId" BETWEEN 1 AND 192
+ON CONFLICT ("showtimeId", "row", "col") DO NOTHING;
+
+-- Insertar reserva para un solo usuario en asiento (0,0) para movieId = 1
+WITH user_id AS (
+  SELECT id FROM "Users" WHERE "email" = 'juan3@example.com' LIMIT 1
+), showtime_id AS (
+  SELECT id
+  FROM "Showtimes"
+  WHERE "movieId" = 1
+    AND "date" = '2025-06-15'
+    AND "time" = '18:00:00'::time
+    AND "branchId" = (SELECT id FROM "Branches" WHERE "name" = 'Perisur' LIMIT 1)
+  LIMIT 1
+)
+, seat_id AS (
+  SELECT id FROM "Seats"
+  WHERE "showtimeId" = (SELECT id FROM showtime_id)
+    AND "row" = 0 AND "col" = 0
+  LIMIT 1
+)
+INSERT INTO "Reservations" ("movieId", "userId", "showtimeId", "seatId", "status", "createdAt", "updatedAt")
+SELECT
+  1,
+  (SELECT id FROM user_id),
+  (SELECT id FROM showtime_id),
+  (SELECT id FROM seat_id),
+  'confirmed',
+  NOW(),
+  NOW()
+WHERE EXISTS (SELECT 1 FROM seat_id)
+ON CONFLICT DO NOTHING;

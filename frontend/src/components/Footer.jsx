@@ -1,4 +1,4 @@
-// frontend/src/components/Footer.jsx
+
 import { Link } from 'react-router-dom';
 import logo from '../assets/logo.png';
 

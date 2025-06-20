@@ -27,7 +27,7 @@ module.exports = (sequelize) => {
     },
   });
 
-  // Definir asociaciones
+
   Movie.associate = (models) => {
     Movie.hasMany(models.Showtime, { foreignKey: 'movieId', as: 'Showtimes' });
   };

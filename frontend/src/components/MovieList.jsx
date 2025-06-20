@@ -4,14 +4,15 @@ import { debounce } from 'lodash';
 import axios from 'axios';
 import logo from '../assets/logo.png';
 import Footer from '../components/Footer';
+import { useAuth } from '../context/AuthContext'; // Importar el contexto de autenticación
 
 function MovieList() {
   const navigate = useNavigate();
+  const { isLoggedIn, user, login, logout } = useAuth(); // Obtener estado de autenticación
   const [movies, setMovies] = useState([]);
   const [filteredMovies, setFilteredMovies] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [notification, setNotification] = useState('');
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
 
   useEffect(() => {
@@ -51,21 +52,12 @@ function MovieList() {
   const handleCloseDialog = () => setShowDialog(false);
   const handleAuth = () => {
     setShowDialog(false);
-    navigate('/auth');
+    navigate('/login');
   };
 
   const debouncedSearch = debounce((value) => {
     setSearchQuery(value);
   }, 300);
-
-  const currentDateTime = new Date().toLocaleString('es-MX', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  });
 
   const dismissNotification = () => setNotification('');
 
@@ -86,11 +78,11 @@ function MovieList() {
         ))}
       </div>
 
-      {/* Header */}
+      {/* Header con funcionalidad completa de autenticación */}
       <header className="bg-gray-900 bg-opacity-90 text-gray-100 p-4 shadow-lg z-10">
         <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <Link to="/" className="flex-shrink-0">
-            <img src={logo} alt="EsCine Logo" className="max-h-20 w-auto object-contain" loading="lazy" />
+            <img src={logo} alt="Cinema Logo" className="max-h-20 w-auto object-contain" loading="lazy" />
           </Link>
           <nav className="flex flex-col md:flex-row gap-2 md:gap-4 mb-2 md:mb-0">
             <Link to="/" className="px-4 py-2 bg-indigo-600 rounded-lg hover:bg-indigo-500 transition-all text-base font-body font-semibold">Inicio</Link>
@@ -111,18 +103,18 @@ function MovieList() {
             <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-indigo-400">🔍</span>
           </div>
           <div className="flex flex-col items-center cursor-pointer" onClick={handleAvatarClick}>
-            <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-all" aria-label={isLoggedIn ? "Perfil de usuario" : "Iniciar sesión"}>
+            <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center hover:bg-gray-400 transition-all" aria-label={isLoggedIn && user ? `Perfil de ${user.name || 'Usuario'}` : "Iniciar sesión"}>
               <span className="text-xl text-gray-900">👤</span>
             </div>
-            <span className="text-sm font-body font-semibold mt-1">{isLoggedIn ? "Usuario" : "Invitado"}</span>
+            <span className="text-sm font-body font-medium">{isLoggedIn && user ? user.name || 'Usuario' : 'Invitado'}</span>
           </div>
         </div>
       </header>
 
-      {/* Modal Dialog */}
+      {/* Modal Dialog con funcionalidad de autenticación */}
       {showDialog && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-75 z-50" role="dialog" aria-modal="true">
-          <div className="bg-gray-900 p-6 rounded-xl shadow-2xl w-full max-w-sm text-gray-100 relative">
+          <div className="bg-gray-900 p-6 rounded-xl shadow-2xl w-full max-w-sm transform animate-fade-in relative">
             <button
               className="absolute top-2 right-2 text-gray-100 hover:text-gray-300 text-xl"
               onClick={handleCloseDialog}
@@ -130,9 +122,9 @@ function MovieList() {
             >
               ✕
             </button>
-            <h3 className="text-lg font-heading font-bold text-gold-400 mb-4">¡Embárcate en el mundo del cine!</h3>
+            <h3 className="text-lg font-heading font-bold text-gray-100 mb-4">¡Únete al mundo del cine mágico!</h3>
             <p className="text-gray-100 font-body mb-4">
-              {isLoggedIn ? "¡Estás listo para explorar historias épicas!" : "¡Inicia sesión o regístrate para desbloquear la magia del cine!"}
+              {isLoggedIn && user ? `¡Estás listo para vivir aventuras épicas en la gran pantalla, ${user.name || 'Usuario'}!` : "¡Embárcate en una aventura! Inicia sesión o regístrate para desbloquear contenido exclusivo."}
             </p>
             {!isLoggedIn && (
               <div className="flex justify-center">
@@ -144,16 +136,32 @@ function MovieList() {
                 </button>
               </div>
             )}
+            {isLoggedIn && user && (
+              <div className="flex justify-center gap-4">
+                <Link
+                  to="/profile"
+                  className="bg-indigo-600 text-gray-100 px-4 py-2 rounded-full hover:bg-indigo-500 transition-all shadow-md hover:shadow-indigo-600/50 hover-sparkle relative"
+                >
+                  Ver Perfil
+                </Link>
+                <button
+                  onClick={() => {
+                    logout();
+                    handleCloseDialog();
+                  }}
+                  className="bg-red-600 text-gray-100 px-4 py-2 rounded-full hover:bg-red-500 transition-all shadow-md hover:shadow-red-600/50 hover-sparkle relative"
+                >
+                  Cerrar sesión
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Banner */}
-      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-3 text-center text-gray-100 mb-2 shadow-md animate-glow relative z-10" aria-live="polite">
-        <p className="text-base font-body font-semibold">
-          ¡Descubre las películas de hoy, Únete a miles de cinéfilos.
-        </p>
-      </div>
+      {/* Banner (opcional, replicado de Home.jsx si lo deseas) */}
+      {/* Nota: El banner depende de timeLeft y showBanner, que no están en MovieList. Si lo quieres, necesitarás agregar su lógica. */}
+      {/* Por simplicidad, lo omitimos aquí, pero puedes añadirlo si es necesario. */}
 
       {/* Main Content */}
       <main className="container mx-auto p-4 flex-grow relative z-10">

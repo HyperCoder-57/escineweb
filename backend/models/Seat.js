@@ -23,6 +23,10 @@ module.exports = (sequelize) => {
       type: DataTypes.ENUM('available', 'reserved'),
       defaultValue: 'available',
     },
+  }, {
+    indexes: [
+      { unique: true, fields: ['showtimeId', 'row', 'col'] } // Índice único
+    ]
   });
 
   Seat.associate = (models) => {

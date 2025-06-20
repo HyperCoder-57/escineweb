@@ -20,7 +20,7 @@ function Home() {
   const carouselEstrenosRef = useRef(null);
   const carouselTodasRef = useRef(null);
 
-  // Fetch datos desde el backend
+
   useEffect(() => {
     const fetchMovies = async () => {
       try {
@@ -125,7 +125,7 @@ function Home() {
     return `${hours}h ${minutes}m ${secs}s`;
   };
 
-  // Controlar showBanner basado en isLoggedIn
+
   useEffect(() => {
     setShowBanner(!isLoggedIn); // Ocultar banner si el usuario está loggeado
   }, [isLoggedIn]);

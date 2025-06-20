@@ -4,8 +4,8 @@
     theme: {
       extend: {
         fontFamily: {
-          // heading: ['Playfair Display', 'serif'],
-          // body: ['Poppins', 'sans-serif'],
+
+
         },
         colors: {
           'indigo-800': '#3730a3',

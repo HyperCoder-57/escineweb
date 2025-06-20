@@ -5,7 +5,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-// Validaciones
+
 const validateRegister = [
   body('name').notEmpty().withMessage('El nombre es requerido'),
   body('email').isEmail().withMessage('Email inválido').normalizeEmail(),
@@ -17,7 +17,7 @@ const validateLogin = [
   body('password').notEmpty().withMessage('La contraseña es requerida'),
 ];
 
-// Rutas
+
 router.post('/users/register', validateRegister, (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {

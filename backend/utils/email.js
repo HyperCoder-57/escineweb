@@ -1,6 +1,6 @@
 const nodemailer = require('nodemailer');
 
-// Configuración para códigos de verificación
+
 const transporterVerification = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 587,
@@ -11,7 +11,7 @@ const transporterVerification = nodemailer.createTransport({
   },
 });
 
-// Configuración para mensajes de contacto
+
 const transporterContact = nodemailer.createTransport({
   host: 'smtp.gmail.com',
   port: 587,
@@ -22,7 +22,7 @@ const transporterContact = nodemailer.createTransport({
   },
 });
 
-// Prueba inicial de conexión para transporterContact
+
 transporterContact.verify((error, success) => {
   if (error) {
     console.error('Error al verificar transporterContact:', error);

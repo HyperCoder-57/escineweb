@@ -40,7 +40,7 @@ function App() {
   );
 }
 
-// Componente para proteger rutas
+
 function ProtectedRoute({ children }) {
   const { isLoggedIn } = useAuth();
   const navigate = useNavigate();

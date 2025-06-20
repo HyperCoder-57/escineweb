@@ -19,7 +19,7 @@ function Reviews() {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    // Cargar reseñas destacadas desde localStorage
+
     const savedReviews = localStorage.getItem('reviews');
     if (savedReviews) {
       setReviews(JSON.parse(savedReviews));
@@ -53,7 +53,7 @@ function Reviews() {
     e.preventDefault();
     if (!validateInputs()) return;
 
-    // En un caso real: enviar al backend
+
     const newReview = {
       ...formData,
       user: user ? user.name || 'Anónimo' : 'Anónimo', // Usa el nombre del usuario del contexto

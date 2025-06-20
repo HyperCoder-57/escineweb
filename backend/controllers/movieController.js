@@ -9,7 +9,11 @@ const movieController = {
       const movies = await db.Movie.findAll({
         where, // Aplicar el filtro de where
         limit: limit ? parseInt(limit) : undefined, // Soporte para limit
-        include: [{ model: db.Showtime, as: 'Showtimes' }],
+        include: [{
+          model: db.Showtime,
+          as: 'Showtimes',
+          include: [{ model: db.Branch, as: 'Branch' }] // Incluir sucursales
+        }],
       });
       res.json(movies);
     } catch (error) {
@@ -21,7 +25,11 @@ const movieController = {
   getMovieById: async (req, res) => {
     try {
       const movie = await db.Movie.findByPk(req.params.id, {
-        include: [{ model: db.Showtime, as: 'Showtimes' }],
+        include: [{
+          model: db.Showtime,
+          as: 'Showtimes',
+          include: [{ model: db.Branch, as: 'Branch' }] // Incluir sucursales
+        }],
       });
       if (!movie) return res.status(404).json({ message: 'Película no encontrada' });
       res.json(movie);
@@ -43,7 +51,11 @@ const movieController = {
             { genre: { [Op.iLike]: `%${query}%` } },
           ],
         },
-        include: [{ model: db.Showtime, as: 'Showtimes' }],
+        include: [{
+          model: db.Showtime,
+          as: 'Showtimes',
+          include: [{ model: db.Branch, as: 'Branch' }] // Incluir sucursales
+        }],
       });
       res.json(movies);
     } catch (error) {

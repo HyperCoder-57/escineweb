@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const Sequelize = require('sequelize');
 const basename = path.basename(__filename);
-const sequelize = require('../config/db.config.js'); // Usa la instancia existente
+const sequelize = require('../config/db.config.js');  
 const db = {};
 
 fs
@@ -31,7 +31,7 @@ Object.keys(db).forEach(modelName => {
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
 
-// Eliminar las relaciones manuales para evitar conflictos
-// (las asociaciones ahora se manejan en los métodos associate de los modelos)
+
+
 
 module.exports = db;
